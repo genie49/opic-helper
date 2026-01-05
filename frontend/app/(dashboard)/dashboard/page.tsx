@@ -1,7 +1,25 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/db";
+import { questions, questionTopics, opicLevels } from "@/lib/db/schema";
+import { count, desc } from "drizzle-orm";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Fetch real data from database
+  const [questionsCount] = await db.select({ count: count() }).from(questions);
+  const [topicsCount] = await db.select({ count: count() }).from(questionTopics);
+  const levels = await db.select().from(opicLevels).orderBy(opicLevels.levelOrder);
+  const recentQuestions = await db
+    .select({
+      id: questions.id,
+      questionText: questions.questionText,
+      questionType: questions.questionType,
+      topicId: questions.topicId,
+    })
+    .from(questions)
+    .limit(3);
+  const topics = await db.select().from(questionTopics).limit(5);
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div>
@@ -15,48 +33,48 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">현재 레벨</CardTitle>
+            <CardTitle className="text-sm font-medium">OPIc 레벨</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">IM2</div>
+            <div className="text-2xl font-bold">{levels.length}단계</div>
             <p className="text-xs text-muted-foreground">
-              목표: IH
+              NL부터 AL까지
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">학습한 문제</CardTitle>
+            <CardTitle className="text-sm font-medium">사용 가능한 문제</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{questionsCount.count}</div>
             <p className="text-xs text-muted-foreground">
-              +4 from last week
+              다양한 주제로 준비
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">평균 점수</CardTitle>
+            <CardTitle className="text-sm font-medium">주제 수</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7.5</div>
+            <div className="text-2xl font-bold">{topicsCount.count}</div>
             <p className="text-xs text-muted-foreground">
-              / 10점 만점
+              카페, 집, 여행 등
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">연속 학습일</CardTitle>
+            <CardTitle className="text-sm font-medium">평균 난이도</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12일</div>
+            <div className="text-2xl font-bold">IM2-IH</div>
             <p className="text-xs text-muted-foreground">
-              Great job!
+              중급 수준
             </p>
           </CardContent>
         </Card>
@@ -83,67 +101,61 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>약한 주제</CardTitle>
+            <CardTitle>사용 가능한 주제</CardTitle>
             <CardDescription>
-              집중 학습이 필요한 주제
+              다양한 주제로 연습하세요
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">카페 - 경험</span>
-                <span className="text-sm font-medium text-destructive">5.2</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">여행 - 묘사</span>
-                <span className="text-sm font-medium text-destructive">6.1</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">음악 - 루틴</span>
-                <span className="text-sm font-medium text-yellow-600">6.8</span>
-              </div>
+              {topics.slice(0, 5).map((topic) => (
+                <div key={topic.id} className="flex items-center justify-between">
+                  <span className="text-sm">{topic.topicName}</span>
+                  <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
+                    {topic.category}
+                  </span>
+                </div>
+              ))}
+              {topics.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  데이터를 시딩해주세요 (npm run db:seed)
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Available Questions */}
       <Card>
         <CardHeader>
-          <CardTitle>최근 활동</CardTitle>
+          <CardTitle>사용 가능한 문제</CardTitle>
           <CardDescription>
-            최근 학습 기록
+            데이터베이스에 저장된 문제 목록
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1 flex-1">
-                <p className="text-sm font-medium leading-none">카페 - 기억에 남는 경험</p>
-                <p className="text-sm text-muted-foreground">
-                  평가 레벨: IM3 | 점수: 8.2
-                </p>
+            {recentQuestions.map((question) => (
+              <div key={question.id} className="flex items-start gap-4 p-3 rounded-lg border">
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none line-clamp-2">
+                    {question.questionText}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    유형: {question.questionType}
+                  </p>
+                </div>
+                <Button size="sm" variant="outline">
+                  연습하기
+                </Button>
               </div>
-              <div className="text-sm text-muted-foreground">2시간 전</div>
-            </div>
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1 flex-1">
-                <p className="text-sm font-medium leading-none">집 - 현재 거주지 묘사</p>
-                <p className="text-sm text-muted-foreground">
-                  평가 레벨: IM2 | 점수: 7.5
-                </p>
-              </div>
-              <div className="text-sm text-muted-foreground">어제</div>
-            </div>
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1 flex-1">
-                <p className="text-sm font-medium leading-none">수영 - 일상 루틴</p>
-                <p className="text-sm text-muted-foreground">
-                  평가 레벨: IM2 | 점수: 7.0
-                </p>
-              </div>
-              <div className="text-sm text-muted-foreground">2일 전</div>
-            </div>
+            ))}
+            {recentQuestions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                아직 문제가 없습니다. 데이터를 시딩해주세요 (npm run db:seed)
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
