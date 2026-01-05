@@ -26,10 +26,13 @@
 - **LLM**: Grok (xAI)
 - **Framework**: LangChain (Python)
 - **API Server**: FastAPI (GCP Cloud Run)
+- **DB Client**: Supabase Python Client (ORM 없이, 읽기 전용)
 - **SSE**: sse-starlette
 - **Auth**: Supabase JWT 검증 (모든 엔드포인트)
 - **Frontend**: Next.js + TypeScript (EventSource API)
 - **Vector DB**: Pinecone (선택적, 문제 임베딩용)
+
+**참고**: DB 쓰기 작업은 Next.js API (Drizzle ORM)에서만 수행
 
 ---
 
@@ -120,21 +123,26 @@ llm = ChatOpenAI(
 def select_question_tool(user_level: str, topics: list, weak_topics: list) -> dict:
     """
     DB에서 가중치 기반 문제 선택
+    Supabase Python Client 사용 (읽기 전용)
     """
-    # SQL 쿼리 실행
-    query = """
-    SELECT q.*, COALESCE(qw.weight, 1.0) as weight
-    FROM questions q
-    JOIN question_topics qt ON q.topic_id = qt.id
-    LEFT JOIN question_weights qw
-      ON qt.topic_name = qw.topic_name AND q.question_type = qw.question_type
-    WHERE q.difficulty_level = %s
-      AND qt.topic_name = ANY(%s)
-    ORDER BY weight DESC, RANDOM()
-    LIMIT 1
-    """
-    result = db.execute(query, [user_level, topics])
-    return result
+    from supabase import create_client, Client
+    import os
+
+    supabase: Client = create_client(
+        os.getenv("SUPABASE_URL"),
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    )
+
+    # Supabase Client로 문제 조회
+    response = supabase.table("questions") \
+        .select("*, question_topics(*), question_weights(*)") \
+        .eq("difficulty_level", user_level) \
+        .in_("question_topics.topic_name", topics) \
+        .order("question_weights.weight", desc=True) \
+        .limit(1) \
+        .execute()
+
+    return response.data[0] if response.data else None
 
 # 도구 등록
 tools = [

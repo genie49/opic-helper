@@ -218,18 +218,22 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 ### Backend - API Server (Next.js API Routes - Vercel)
 - **Framework**: Next.js API Routes (서버리스)
 - **Language**: TypeScript
+- **ORM**: Drizzle ORM (타입 안전한 쿼리 빌더)
 - **Auth**: Supabase Auth (Google OAuth) + JWT 검증
 - **DB Client**: Supabase JavaScript Client
 - **역할**:
   - 인증 및 세션 관리 (Google 로그인)
   - 모든 요청에 대한 인증 검증 (로그인 필수)
+  - **모든 DB CRUD 작업** (단일 진실 공급원)
   - 서베이, 문제, 피드백 CRUD
   - 가중치 기반 문제 선택 로직
   - 사용자 수준 업데이트
+  - DB 스키마 마이그레이션 관리
 
 ### Backend - AI Agent Server (FastAPI - GCP Cloud Run)
 - **Framework**: FastAPI
 - **Language**: Python 3.11+
+- **DB Client**: Supabase Python Client (ORM 없이, **읽기 전용**)
 - **AI/ML**:
   - LangChain (Python)
   - Grok API (xAI)
@@ -242,12 +246,26 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
   - 롤플레이 실시간 대화
   - 동적 문제 생성 (Phase 3)
   - 모든 요청에 대한 인증 검증 (로그인 필수)
+  - **DB 읽기 작업만** (사용자 정보, 문제 조회)
 
 ### Database
 - **Primary**: Supabase (PostgreSQL 15+)
 - **Auth**: Supabase Auth (Google OAuth)
 - **Storage**: Supabase Storage (선택적, 음성 파일 저장 시)
 - **RLS**: Row Level Security 활성화 (사용자별 데이터 격리)
+
+### DB 접근 정책
+- **단일 진실 공급원 (Single Source of Truth)**:
+  - Next.js + Drizzle ORM이 DB 스키마 및 마이그레이션 관리
+  - 모든 CRUD 작업은 Next.js API Routes를 통해서만 수행
+- **역할 분리**:
+  - **Next.js API**: 모든 DB 쓰기/읽기 (Drizzle ORM)
+  - **FastAPI**: DB 읽기만 가능 (Supabase Python Client)
+- **장점**:
+  - 중복 스키마 정의 불필요
+  - 마이그레이션 충돌 방지
+  - 타입 안전성 (TypeScript ↔ Drizzle)
+  - FastAPI는 AI 작업에 집중
 
 ### AI/ML Services
 - **LLM**: Grok (xAI)
@@ -646,6 +664,11 @@ Frontend → Next.js API: POST /api/feedback/save
 
 2. **Next.js 프로젝트 초기화**
    - TypeScript + TailwindCSS 설정
+   - **Drizzle ORM 설정**
+     - `drizzle.config.ts` 작성
+     - 스키마 정의 (`drizzle/schema.ts`)
+     - Supabase PostgreSQL 연결
+     - 마이그레이션 스크립트 설정
    - Supabase 클라이언트 설정
    - **Google OAuth 로그인 플로우 구현**
    - **JWT 검증 미들웨어 작성** (모든 API Routes에 적용)
@@ -653,6 +676,10 @@ Frontend → Next.js API: POST /api/feedback/save
 
 3. **FastAPI 프로젝트 초기화**
    - Python 3.11+ 환경 설정
+   - **Supabase Python Client 설정** (읽기 전용)
+     - `supabase-py` 패키지 설치
+     - 환경 변수 설정 (SUPABASE_URL, SERVICE_ROLE_KEY)
+     - 클라이언트 초기화
    - LangChain + Grok API 설정
    - **Supabase JWT 검증 미들웨어** (모든 엔드포인트에 적용)
    - SSE (sse-starlette) 설정
@@ -758,3 +785,195 @@ export async function GET(request: NextRequest) {
 ### FastAPI JWT 검증 (이미 구현됨)
 
 FastAPI의 JWT 검증은 `ai-agent-structure.md` 파일의 `verify_token` 함수 참조.
+
+---
+
+## ORM 및 DB 클라이언트 구현
+
+### Next.js + Drizzle ORM (CRUD 전담)
+
+```typescript
+// drizzle/schema.ts
+import { pgTable, uuid, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+
+export const userProfiles = pgTable("user_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  currentLevel: text("current_level").notNull(),
+  targetLevel: text("target_level"),
+  displayName: text("display_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const feedbacks = pgTable("feedbacks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  questionId: uuid("question_id").notNull(),
+  userAnswer: text("user_answer").notNull(),
+  evaluatedLevel: text("evaluated_level").notNull(),
+  scores: text("scores").notNull(), // JSON string
+  feedback: text("feedback").notNull(), // JSON string
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// drizzle.config.ts
+import type { Config } from "drizzle-kit";
+
+export default {
+  schema: "./drizzle/schema.ts",
+  out: "./drizzle/migrations",
+  driver: "pg",
+  dbCredentials: {
+    connectionString: process.env.DATABASE_URL!,
+  },
+} satisfies Config;
+
+// app/api/feedback/save/route.ts
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { feedbacks } from "@/drizzle/schema";
+import { withAuth } from "@/app/api/middleware/auth";
+
+const client = postgres(process.env.DATABASE_URL!);
+const db = drizzle(client);
+
+export async function POST(request: NextRequest) {
+  return withAuth(request, async (req, userId) => {
+    const body = await req.json();
+
+    // Drizzle ORM으로 DB에 저장
+    const result = await db.insert(feedbacks).values({
+      userId,
+      questionId: body.questionId,
+      userAnswer: body.answer,
+      evaluatedLevel: body.evaluated_level,
+      scores: JSON.stringify(body.scores),
+      feedback: JSON.stringify(body.feedback),
+    }).returning();
+
+    return NextResponse.json({ success: true, data: result[0] });
+  });
+}
+```
+
+---
+
+### FastAPI + Supabase Python Client (읽기 전용)
+
+```python
+# app/database.py
+from supabase import create_client, Client
+import os
+from typing import Optional, Dict, List
+
+# Supabase 클라이언트 (싱글톤)
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+)
+
+# 사용자 정보 조회
+async def get_user_profile(user_id: str) -> Optional[Dict]:
+    """사용자 프로필 조회 (읽기 전용)"""
+    response = supabase.table("user_profiles") \
+        .select("*") \
+        .eq("user_id", user_id) \
+        .single() \
+        .execute()
+
+    return response.data if response.data else None
+
+# 문제 조회
+async def get_question(question_id: str) -> Optional[Dict]:
+    """문제 정보 조회 (읽기 전용)"""
+    response = supabase.table("questions") \
+        .select("*, question_topics(*)") \
+        .eq("id", question_id) \
+        .single() \
+        .execute()
+
+    return response.data if response.data else None
+
+# 가중치 기반 문제 선택
+async def get_weighted_question(
+    user_id: str,
+    user_level: str,
+    topics: List[str]
+) -> Optional[Dict]:
+    """가중치 기반 문제 선택 (읽기 전용)"""
+    # PostgREST의 제약으로 복잡한 쿼리는 RPC 함수 활용
+    response = supabase.rpc(
+        "get_weighted_question",
+        {
+            "p_user_id": user_id,
+            "p_level": user_level,
+            "p_topics": topics
+        }
+    ).execute()
+
+    return response.data if response.data else None
+
+# app/main.py
+from app.database import get_user_profile, get_question
+from fastapi import Depends
+
+@app.post("/evaluate")
+async def evaluate_answer(
+    request: EvaluationRequest,
+    user = Depends(verify_token)
+):
+    # 사용자 정보 조회 (읽기만)
+    user_profile = await get_user_profile(user.id)
+    question = await get_question(request.question_id)
+
+    # AI 평가 수행
+    result = await evaluation_agent.ainvoke({
+        "question": question["question_text"],
+        "answer": request.answer,
+        "current_level": user_profile["current_level"]
+    })
+
+    # ⚠️ DB 저장은 하지 않음!
+    # Frontend가 결과를 받아서 Next.js API로 저장
+    return result
+```
+
+**Supabase RPC 함수 (PostgreSQL):**
+
+```sql
+-- Supabase SQL Editor에서 실행
+CREATE OR REPLACE FUNCTION get_weighted_question(
+    p_user_id UUID,
+    p_level TEXT,
+    p_topics TEXT[]
+)
+RETURNS TABLE (
+    id UUID,
+    question_text TEXT,
+    question_type TEXT,
+    difficulty_level TEXT,
+    topic_name TEXT,
+    weight NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        q.id,
+        q.question_text,
+        q.question_type,
+        q.difficulty_level,
+        qt.topic_name,
+        COALESCE(qw.weight, 1.0) as weight
+    FROM questions q
+    JOIN question_topics qt ON q.topic_id = qt.id
+    LEFT JOIN question_weights qw
+        ON qw.user_id = p_user_id
+        AND qt.topic_name = qw.topic_name
+        AND q.question_type = qw.question_type
+    WHERE q.difficulty_level = p_level
+        AND qt.topic_name = ANY(p_topics)
+    ORDER BY weight DESC, RANDOM()
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
