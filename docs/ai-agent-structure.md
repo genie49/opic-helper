@@ -25,12 +25,11 @@
 
 - **LLM**: Grok (xAI)
 - **Framework**: LangChain (Python)
-- **API Server**: FastAPI (GCP Cloud Run)
+- **API Server**: FastAPI
 - **DB Client**: Supabase Python Client (ORM 없이, 읽기 전용)
 - **SSE**: sse-starlette
 - **Auth**: Supabase JWT 검증 (모든 엔드포인트)
 - **Frontend**: Next.js + TypeScript (EventSource API)
-- **Vector DB**: Pinecone (선택적, 문제 임베딩용)
 
 **참고**: DB 쓰기 작업은 Next.js API (Drizzle ORM)에서만 수행
 
