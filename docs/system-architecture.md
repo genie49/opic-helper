@@ -211,8 +211,9 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript
 - **UI**: TailwindCSS, shadcn/ui
-- **State**: Zustand or React Context
+- **State**: Zustand
 - **Audio**: Web Audio API, MediaRecorder API
+- **STT**: Transformers.js (@xenova/transformers) with WebGPU
 - **HTTP Client**: Fetch API, EventSource (SSE)
 
 ### Backend - API Server (Next.js API Routes - Vercel)
@@ -269,8 +270,13 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 
 ### AI/ML Services
 - **LLM**: Grok (xAI)
-- **STT**: TBD (Google Speech-to-Text, OpenAI Whisper, Web Speech API)
-- **Pronunciation**: TBD (향후 검토)
+- **STT**: Whisper WebGPU (Transformers.js @xenova/transformers)
+  - 클라이언트 사이드 처리 (서버 업로드 없음)
+  - WebGPU 가속 (GPU 활용)
+  - 100% 오프라인 가능 (모델 로드 후)
+- **Pronunciation**: Confidence Score-based Assessment (MVP)
+  - Whisper의 출력 신뢰도 점수 활용
+  - 발음 정확도 프록시 메트릭
 
 ### 인증 정책
 - **필수 로그인**: 모든 서비스는 로그인 후 이용 가능
@@ -289,6 +295,9 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
   - Vercel Analytics (Frontend)
   - GCP Cloud Monitoring (FastAPI)
   - Sentry (선택적)
+- **Requirements**:
+  - WebGPU 지원 브라우저 필요 (Chrome 113+, Edge 113+)
+  - HTTPS 필수 (WebGPU API 제약)
 
 ---
 
@@ -498,12 +507,17 @@ Frontend ← Next.js API: 문제 반환
 ```
 사용자 음성 답변
     ↓
-Frontend: STT (음성 → 텍스트)
+Frontend: 음성 녹음 (MediaRecorder API)
+    ↓
+Frontend: Whisper WebGPU 처리 (클라이언트)
+    - 음성 → 텍스트 변환
+    - Confidence Score 추출 (발음 평가)
     ↓
 Frontend: 텍스트 표시 (확인, 수정 불가)
     ↓
 Frontend → FastAPI (Cloud Run): POST /evaluate
     (Header: Authorization: Bearer {token})
+    - 텍스트 + Confidence Score 전송
     ↓
 FastAPI: JWT 검증 (verify_token)
     ↓
