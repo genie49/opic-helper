@@ -23,10 +23,11 @@
 
 ### 기술 스택
 
-- **LLM**: OpenAI GPT-4 Turbo
+- **LLM**: Grok (xAI)
 - **Framework**: LangChain (Python)
 - **API Server**: FastAPI (GCP Cloud Run)
 - **SSE**: sse-starlette
+- **Auth**: Supabase JWT 검증 (모든 엔드포인트)
 - **Frontend**: Next.js + TypeScript (EventSource API)
 - **Vector DB**: Pinecone (선택적, 문제 임베딩용)
 
@@ -105,8 +106,15 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.tools import Tool
 from langchain.schema import SystemMessage, HumanMessage
 
-# LLM 초기화
-llm = ChatOpenAI(model="gpt-4-turbo-preview", temperature=0.7)
+# LLM 초기화 (Grok via OpenAI-compatible API)
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
+    model="grok-beta",
+    api_key=os.getenv("XAI_API_KEY"),
+    base_url="https://api.x.ai/v1",
+    temperature=0.7
+)
 
 # 문제 선택 도구
 def select_question_tool(user_level: str, topics: list, weak_topics: list) -> dict:
@@ -696,14 +704,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 인증 검증
-async def verify_token(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="No token")
+# 인증 검증 (모든 엔드포인트 필수)
+from fastapi import Header, HTTPException
+from supabase import create_client, Client
+import os
 
-    token = authorization.replace("Bearer ", "")
-    user = supabase.auth.get_user(token)
-    return user
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+)
+
+async def verify_token(authorization: str = Header(None)):
+    """
+    Supabase JWT 검증
+    모든 API 요청은 로그인 필수
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="인증 토큰이 필요합니다. 로그인 후 이용하세요."
+        )
+
+    try:
+        token = authorization.replace("Bearer ", "")
+
+        # Supabase Auth API로 토큰 검증
+        user_response = supabase.auth.get_user(token)
+
+        if not user_response or not user_response.user:
+            raise HTTPException(
+                status_code=401,
+                detail="유효하지 않은 토큰입니다."
+            )
+
+        return user_response.user
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail=f"인증 실패: {str(e)}"
+        )
 
 # SSE 평가 엔드포인트
 @app.post("/evaluate")

@@ -49,7 +49,7 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 │                             │  │  │  - 롤플레이 Agent    │   │
 └─────────────┬───────────────┘  │  └──────────────────────┘   │
               │                  │                             │
-              │                  │  - OpenAI GPT-4             │
+              │                  │  - Grok (xAI)               │
               │                  │  - SSE 스트리밍 응답        │
               │                  └─────────────────────────────┘
               │
@@ -218,10 +218,11 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 ### Backend - API Server (Next.js API Routes - Vercel)
 - **Framework**: Next.js API Routes (서버리스)
 - **Language**: TypeScript
-- **Auth**: Supabase Auth (JWT 검증)
+- **Auth**: Supabase Auth (Google OAuth) + JWT 검증
 - **DB Client**: Supabase JavaScript Client
 - **역할**:
-  - 인증 및 세션 관리
+  - 인증 및 세션 관리 (Google 로그인)
+  - 모든 요청에 대한 인증 검증 (로그인 필수)
   - 서베이, 문제, 피드백 CRUD
   - 가중치 기반 문제 선택 로직
   - 사용자 수준 업데이트
@@ -231,24 +232,35 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 - **Language**: Python 3.11+
 - **AI/ML**:
   - LangChain (Python)
-  - OpenAI API (GPT-4 Turbo)
+  - Grok API (xAI)
   - LangGraph (다중 Agent 협업, Phase 3)
 - **SSE**: sse-starlette
+- **Auth**: Supabase JWT 검증 (모든 엔드포인트 인증 필수)
 - **역할**:
   - LangChain Agent 실행
   - 답변 평가 및 피드백 생성 (SSE 스트리밍)
   - 롤플레이 실시간 대화
   - 동적 문제 생성 (Phase 3)
+  - 모든 요청에 대한 인증 검증 (로그인 필수)
 
 ### Database
 - **Primary**: Supabase (PostgreSQL 15+)
-- **Auth**: Supabase Auth
+- **Auth**: Supabase Auth (Google OAuth)
 - **Storage**: Supabase Storage (선택적, 음성 파일 저장 시)
+- **RLS**: Row Level Security 활성화 (사용자별 데이터 격리)
 
 ### AI/ML Services
-- **LLM**: OpenAI GPT-4 Turbo
+- **LLM**: Grok (xAI)
 - **STT**: TBD (Google Speech-to-Text, OpenAI Whisper, Web Speech API)
 - **Pronunciation**: TBD (향후 검토)
+
+### 인증 정책
+- **필수 로그인**: 모든 서비스는 로그인 후 이용 가능
+- **인증 방식**: Supabase Google OAuth
+- **토큰 검증**:
+  - Next.js API: Supabase Client SDK로 JWT 검증
+  - FastAPI: Supabase Auth API로 JWT 검증
+- **세션 관리**: Supabase Auth 자동 관리 (토큰 갱신)
 
 ### Deployment
 - **Frontend**: Vercel
@@ -414,20 +426,49 @@ evaluation_chain = evaluation_prompt | llm | output_parser
 
 ## 데이터 플로우
 
+### 0. 로그인 플로우 (필수)
+
+```
+사용자 방문
+    ↓
+Supabase Google OAuth 로그인
+    ↓
+Google 계정 선택 및 동의
+    ↓
+Supabase: JWT 토큰 발급
+    ↓
+Frontend: 토큰 저장 (세션)
+    ↓
+서비스 이용 가능
+```
+
+**모든 API 요청에 JWT 토큰 포함:**
+- Next.js API: `Authorization: Bearer {token}`
+- FastAPI: `Authorization: Bearer {token}`
+
+---
+
 ### 1. 문제 출제 플로우
 
 ```
-사용자 로그인
+사용자 로그인 완료 (JWT 보유)
     ↓
 서베이 작성 (최초 1회)
     ↓
 대시보드 → "학습 시작" 클릭
     ↓
-[문제 출제 Agent 호출]
+Frontend → Next.js API: GET /api/question/next
+    (Header: Authorization: Bearer {token})
+    ↓
+Next.js API: JWT 검증
+    ↓
+[문제 출제 로직 실행]
     ↓
 사용자 수준 + 서베이 + 가중치 분석
     ↓
 문제 선택 or 생성
+    ↓
+Frontend ← Next.js API: 문제 반환
     ↓
 문제 표시
 ```
@@ -443,11 +484,12 @@ Frontend: STT (음성 → 텍스트)
     ↓
 Frontend: 텍스트 표시 (확인, 수정 불가)
     ↓
-Frontend → FastAPI (Cloud Run): POST /evaluate/start
+Frontend → FastAPI (Cloud Run): POST /evaluate
+    (Header: Authorization: Bearer {token})
     ↓
-FastAPI: 평가 시작 (비동기 백그라운드)
+FastAPI: JWT 검증 (verify_token)
     ↓
-Frontend ← FastAPI: SSE 연결 (GET /evaluate/stream)
+FastAPI: 평가 시작 (SSE 스트리밍)
     ↓ (스트리밍 시작)
     ↓
 Event 1: "분석 중..." (progress: 20%)
@@ -463,6 +505,9 @@ Event 5: "완료" (progress: 100%, result 포함)
 Frontend: 결과 수신, SSE 연결 종료
     ↓
 Frontend → Next.js API: POST /api/feedback/save
+    (Header: Authorization: Bearer {token})
+    ↓
+Next.js API: JWT 검증
     ↓
 Next.js API: DB 저장 (feedbacks, user_profiles)
     ↓
@@ -483,6 +528,9 @@ Frontend: 피드백 표시
 ```
 [11번 문제 - 정보 요청]
 Frontend → FastAPI: POST /roleplay/start
+    (Header: Authorization: Bearer {token})
+    ↓
+FastAPI: JWT 검증
     ↓
 FastAPI: 상황 제시 + 대화 세션 생성
     ↓
@@ -491,6 +539,9 @@ Frontend: 상황 표시
 사용자: 질문 1 (음성) → STT → 텍스트
     ↓
 Frontend → FastAPI: POST /roleplay/chat (SSE)
+    (Header: Authorization: Bearer {token})
+    ↓
+FastAPI: JWT 검증
     ↓ (스트리밍 응답)
 AI 응답 생성 중... (단어별 스트리밍)
     ↓
@@ -586,17 +637,25 @@ Frontend → Next.js API: POST /api/feedback/save
 
 1. **Supabase 프로젝트 설정**
    - 프로젝트 생성
+   - **Google OAuth 설정** (Authentication → Providers → Google)
+   - Google Cloud Console에서 OAuth 클라이언트 ID 생성
+   - Supabase에 클라이언트 ID/Secret 등록
    - 테이블 마이그레이션 (database-schema.md 참고)
+   - RLS (Row Level Security) 정책 활성화
    - 초기 데이터 시드 (등급, 주제, 문제 30~50개)
 
 2. **Next.js 프로젝트 초기화**
    - TypeScript + TailwindCSS 설정
    - Supabase 클라이언트 설정
-   - 기본 인증 플로우 구현
+   - **Google OAuth 로그인 플로우 구현**
+   - **JWT 검증 미들웨어 작성** (모든 API Routes에 적용)
+   - 세션 관리 (클라이언트 + 서버)
 
 3. **FastAPI 프로젝트 초기화**
    - Python 3.11+ 환경 설정
-   - LangChain 설치
+   - LangChain + Grok API 설정
+   - **Supabase JWT 검증 미들웨어** (모든 엔드포인트에 적용)
+   - SSE (sse-starlette) 설정
    - 기본 Agent 프로토타입
    - Dockerfile 작성
 
@@ -604,7 +663,11 @@ Frontend → Next.js API: POST /api/feedback/save
    - GCP 프로젝트 생성
    - Cloud Run API 활성화
    - Artifact Registry 설정
-   - 환경 변수 구성
+   - 환경 변수 구성:
+     - `SUPABASE_URL`
+     - `SUPABASE_SERVICE_ROLE_KEY`
+     - `XAI_API_KEY` (Grok)
+     - `ALLOWED_ORIGINS` (CORS)
 
 ### 개발 단계별 작업
 
@@ -629,3 +692,69 @@ Frontend → Next.js API: POST /api/feedback/save
 
 ### 대화형 AI
 - [대화형 챗봇 설계의 과제](https://gist.github.com/haje01/7fc9d1b1fc1b6c8c9b7918abf5407a86)
+
+---
+
+## 인증 구현 예제
+
+### Next.js API Routes JWT 검증
+
+```typescript
+// app/api/middleware/auth.ts
+import { createServerClient } from "@supabase/ssr";
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+export async function withAuth(
+  request: NextRequest,
+  handler: (request: NextRequest, userId: string) => Promise<NextResponse>
+) {
+  const cookieStore = cookies();
+
+  // Supabase 클라이언트 생성
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
+  // JWT 검증
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return NextResponse.json(
+      { error: "인증이 필요합니다. 로그인 후 이용하세요." },
+      { status: 401 }
+    );
+  }
+
+  // 핸들러 실행
+  return handler(request, user.id);
+}
+
+// app/api/question/next/route.ts
+import { withAuth } from "@/app/api/middleware/auth";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  return withAuth(request, async (req, userId) => {
+    // 인증된 사용자의 문제 선택 로직
+    const question = await getNextQuestion(userId);
+
+    return NextResponse.json({ question });
+  });
+}
+```
+
+### FastAPI JWT 검증 (이미 구현됨)
+
+FastAPI의 JWT 검증은 `ai-agent-structure.md` 파일의 `verify_token` 함수 참조.
