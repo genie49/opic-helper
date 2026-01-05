@@ -28,52 +28,52 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (Next.js)                    │
-│  - 음성 입력 UI                                              │
-│  - 문제 표시                                                 │
-│  - 피드백 표시                                               │
-│  - 대시보드 (수준, 진행도)                                   │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-                 │ HTTP/WebSocket
-                 │
-┌────────────────▼────────────────────────────────────────────┐
-│                      Backend (Node.js/Python)                │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           API Layer                                   │   │
-│  │  - 음성 → 텍스트 변환                                │   │
-│  │  - 문제 제공 API                                     │   │
-│  │  - 피드백 제공 API                                   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           AI Agent Layer (LangChain)                  │   │
-│  │  ┌─────────────────┐  ┌──────────────────┐          │   │
-│  │  │ 문제 출제 Agent │  │ 수준 판별 Agent  │          │   │
-│  │  │                 │  │                  │          │   │
-│  │  │ - 문제 선택     │  │ - 답변 분석      │          │   │
-│  │  │ - 문제 생성     │  │ - 수준 업데이트  │          │   │
-│  │  │ - 롤플레이 대화 │  │ - 피드백 생성    │          │   │
-│  │  └─────────────────┘  └──────────────────┘          │   │
-│  │                                                       │   │
-│  │  ┌─────────────────────────────────────┐            │   │
-│  │  │     문제 생성 Agent (선택적)         │            │   │
-│  │  │  - 동적 문제 생성                    │            │   │
-│  │  │  - 주제/유형/난이도 기반             │            │   │
-│  │  └─────────────────────────────────────┘            │   │
-│  └──────────────────────────────────────────────────────┘   │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-                 │
-┌────────────────▼────────────────────────────────────────────┐
-│              Database (Supabase - PostgreSQL)                │
-│  - users (사용자 정보)                                       │
-│  - user_levels (사용자 수준 정보)                            │
-│  - questions (문제 풀)                                       │
-│  - feedbacks (피드백 이력)                                   │
-│  - survey_selections (서베이 선택)                           │
-└──────────────────────────────────────────────────────────────┘
+│                   Frontend (Next.js - Vercel)                │
+│  - UI/UX                                                     │
+│  - 음성 입력 (Web Audio API)                                │
+│  - 클라이언트 상태 관리                                      │
+└──────────────┬──────────────────────────┬────────────────────┘
+               │                          │
+               │ HTTP/REST                │ SSE (직접 통신)
+               │ (DB 작업)                │ (AI 작업)
+               │                          │
+┌──────────────▼──────────────┐  ┌───────▼─────────────────────┐
+│  Next.js API Routes         │  │  FastAPI (GCP Cloud Run)    │
+│  (Vercel)                   │  │                             │
+│                             │  │  ┌──────────────────────┐   │
+│  - 인증 (Supabase Auth)     │  │  │  LangChain Agents    │   │
+│  - 서베이 CRUD              │  │  │                      │   │
+│  - 문제 선택 로직           │  │  │  - 문제 출제 Agent   │   │
+│  - 피드백 저장              │  │  │  - 수준 판별 Agent   │   │
+│  - 수준 업데이트            │  │  │  - 문제 생성 Agent   │   │
+│                             │  │  │  - 롤플레이 Agent    │   │
+└─────────────┬───────────────┘  │  └──────────────────────┘   │
+              │                  │                             │
+              │                  │  - OpenAI GPT-4             │
+              │                  │  - SSE 스트리밍 응답        │
+              │                  └─────────────────────────────┘
+              │
+              │ Supabase Client
+              │
+┌─────────────▼────────────────────────────────────────────────┐
+│              Database (Supabase - PostgreSQL)                 │
+│  - users (사용자 정보)                                        │
+│  - user_profiles (사용자 프로필)                              │
+│  - opic_levels (등급 마스터)                                  │
+│  - questions (문제 풀)                                        │
+│  - feedbacks (피드백 이력)                                    │
+│  - survey_selections (서베이 선택)                            │
+│  - user_question_mastery (숙달도)                             │
+│  - question_weights (가중치)                                  │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+### 통신 구조 특징
+
+- **Frontend → Next.js API**: DB 작업 (CRUD, 비즈니스 로직)
+- **Frontend → FastAPI**: AI 작업 (평가, 대화, 문제 생성) - **SSE 직접 통신**
+- **레이턴시 최소화**: AI 응답이 프록시 없이 직접 스트리밍
+- **독립적 스케일링**: AI 서비스가 Cloud Run에서 자동 스케일링
 
 ---
 
@@ -207,35 +207,58 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 
 ## 기술 스택
 
-### Frontend
+### Frontend (Next.js - Vercel)
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript
 - **UI**: TailwindCSS, shadcn/ui
 - **State**: Zustand or React Context
 - **Audio**: Web Audio API, MediaRecorder API
+- **HTTP Client**: Fetch API, EventSource (SSE)
 
-### Backend
-- **API**: Next.js API Routes (서버리스) or FastAPI (Python)
-- **Language**: TypeScript / Python
+### Backend - API Server (Next.js API Routes - Vercel)
+- **Framework**: Next.js API Routes (서버리스)
+- **Language**: TypeScript
+- **Auth**: Supabase Auth (JWT 검증)
+- **DB Client**: Supabase JavaScript Client
+- **역할**:
+  - 인증 및 세션 관리
+  - 서베이, 문제, 피드백 CRUD
+  - 가중치 기반 문제 선택 로직
+  - 사용자 수준 업데이트
+
+### Backend - AI Agent Server (FastAPI - GCP Cloud Run)
+- **Framework**: FastAPI
+- **Language**: Python 3.11+
 - **AI/ML**:
-  - LangChain (AI Agent)
-  - OpenAI API (GPT-4)
-  - LangGraph (다중 Agent 협업, 선택적)
+  - LangChain (Python)
+  - OpenAI API (GPT-4 Turbo)
+  - LangGraph (다중 Agent 협업, Phase 3)
+- **SSE**: sse-starlette
+- **역할**:
+  - LangChain Agent 실행
+  - 답변 평가 및 피드백 생성 (SSE 스트리밍)
+  - 롤플레이 실시간 대화
+  - 동적 문제 생성 (Phase 3)
 
 ### Database
-- **Primary**: Supabase (PostgreSQL)
+- **Primary**: Supabase (PostgreSQL 15+)
 - **Auth**: Supabase Auth
 - **Storage**: Supabase Storage (선택적, 음성 파일 저장 시)
 
 ### AI/ML Services
-- **LLM**: OpenAI GPT-4 (또는 GPT-4 Turbo)
-- **STT**: TBD (Google, OpenAI Whisper, Web Speech API)
+- **LLM**: OpenAI GPT-4 Turbo
+- **STT**: TBD (Google Speech-to-Text, OpenAI Whisper, Web Speech API)
 - **Pronunciation**: TBD (향후 검토)
 
 ### Deployment
-- **Frontend/Backend**: Vercel
+- **Frontend**: Vercel
+- **Next.js API**: Vercel (서버리스)
+- **FastAPI**: GCP Cloud Run (컨테이너)
 - **Database**: Supabase Cloud
-- **Monitoring**: Vercel Analytics, Sentry (선택적)
+- **Monitoring**:
+  - Vercel Analytics (Frontend)
+  - GCP Cloud Monitoring (FastAPI)
+  - Sentry (선택적)
 
 ---
 
@@ -411,54 +434,91 @@ evaluation_chain = evaluation_prompt | llm | output_parser
 
 ---
 
-### 2. 답변 및 평가 플로우
+### 2. 답변 및 평가 플로우 (SSE)
 
 ```
 사용자 음성 답변
     ↓
-STT (음성 → 텍스트)
+Frontend: STT (음성 → 텍스트)
     ↓
-텍스트 표시 (확인, 수정 불가)
+Frontend: 텍스트 표시 (확인, 수정 불가)
     ↓
-[수준 판별 Agent 호출]
+Frontend → FastAPI (Cloud Run): POST /evaluate/start
     ↓
-5가지 기준 평가
+FastAPI: 평가 시작 (비동기 백그라운드)
     ↓
-수준 업데이트 여부 판단
+Frontend ← FastAPI: SSE 연결 (GET /evaluate/stream)
+    ↓ (스트리밍 시작)
     ↓
-DB 업데이트 (user_levels)
+Event 1: "분석 중..." (progress: 20%)
     ↓
-피드백 생성 및 저장 (feedbacks)
+Event 2: "문법 평가 중..." (progress: 40%)
     ↓
-피드백 표시
+Event 3: "어휘 분석 중..." (progress: 60%)
+    ↓
+Event 4: "피드백 생성 중..." (progress: 80%)
+    ↓
+Event 5: "완료" (progress: 100%, result 포함)
+    ↓
+Frontend: 결과 수신, SSE 연결 종료
+    ↓
+Frontend → Next.js API: POST /api/feedback/save
+    ↓
+Next.js API: DB 저장 (feedbacks, user_profiles)
+    ↓
+Frontend: 피드백 표시
     ↓
 다음 문제 or 학습 종료
 ```
 
+**SSE 장점:**
+- 실시간 진행 상황 표시 (UX 향상)
+- 긴 AI 처리 시간에도 사용자 이탈 방지
+- 타임아웃 없이 안정적 통신
+
 ---
 
-### 3. 롤플레이 플로우
+### 3. 롤플레이 플로우 (SSE 대화)
 
 ```
-[11번 문제]
-AI: 상황 제시
+[11번 문제 - 정보 요청]
+Frontend → FastAPI: POST /roleplay/start
     ↓
-사용자: 질문 1 (음성)
+FastAPI: 상황 제시 + 대화 세션 생성
     ↓
-AI: 실시간 응답
+Frontend: 상황 표시
     ↓
-사용자: 질문 2 (음성)
+사용자: 질문 1 (음성) → STT → 텍스트
     ↓
-AI: 실시간 응답
+Frontend → FastAPI: POST /roleplay/chat (SSE)
+    ↓ (스트리밍 응답)
+AI 응답 생성 중... (단어별 스트리밍)
+    ↓
+Frontend: 타이핑 효과로 표시
+    ↓
+사용자: 질문 2 (음성) → STT → 텍스트
+    ↓
+Frontend → FastAPI: POST /roleplay/chat (SSE)
+    ↓
+AI 응답 생성 중...
     ↓
 ... (3~4개 질문 반복)
     ↓
-[수준 판별 Agent 호출]
+Frontend → FastAPI: POST /roleplay/end
     ↓
-대화 전체 평가
+FastAPI: 대화 전체 평가 (수준 판별 Agent)
     ↓
-피드백 제공
+Frontend ← FastAPI: 평가 결과
+    ↓
+Frontend → Next.js API: POST /api/feedback/save
+    ↓
+피드백 표시
 ```
+
+**롤플레이 SSE 특징:**
+- 단어별 스트리밍으로 자연스러운 대화 느낌
+- LangChain Memory로 대화 컨텍스트 유지
+- 실시간 응답으로 실제 시험과 유사한 경험
 
 ---
 
@@ -522,10 +582,37 @@ AI: 실시간 응답
 
 ## 다음 단계
 
-1. **DB 스키마 설계** - 테이블 구조 상세 정의
-2. **AI Agent 프롬프트 전략** - 각 Agent별 프롬프트 엔지니어링
-3. **API 명세** - 엔드포인트 정의
+### 즉시 시작 가능
+
+1. **Supabase 프로젝트 설정**
+   - 프로젝트 생성
+   - 테이블 마이그레이션 (database-schema.md 참고)
+   - 초기 데이터 시드 (등급, 주제, 문제 30~50개)
+
+2. **Next.js 프로젝트 초기화**
+   - TypeScript + TailwindCSS 설정
+   - Supabase 클라이언트 설정
+   - 기본 인증 플로우 구현
+
+3. **FastAPI 프로젝트 초기화**
+   - Python 3.11+ 환경 설정
+   - LangChain 설치
+   - 기본 Agent 프로토타입
+   - Dockerfile 작성
+
+4. **GCP Cloud Run 배포 준비**
+   - GCP 프로젝트 생성
+   - Cloud Run API 활성화
+   - Artifact Registry 설정
+   - 환경 변수 구성
+
+### 개발 단계별 작업
+
+1. **DB 스키마 설계** - ✅ 완료 (database-schema.md)
+2. **AI Agent 프롬프트 전략** - ✅ 완료 (ai-agent-structure.md)
+3. **API 명세 작성** - Frontend ↔ FastAPI 엔드포인트 정의
 4. **UI/UX 와이어프레임** - 화면 설계
+5. **SSE 통신 프로토타입** - Frontend EventSource + FastAPI SSE
 
 ---
 

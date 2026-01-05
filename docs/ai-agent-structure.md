@@ -23,9 +23,11 @@
 
 ### 기술 스택
 
-- **LLM**: OpenAI GPT-4 (또는 GPT-4 Turbo)
-- **Framework**: LangChain
-- **Language**: Python (FastAPI) 또는 TypeScript (Vercel AI SDK)
+- **LLM**: OpenAI GPT-4 Turbo
+- **Framework**: LangChain (Python)
+- **API Server**: FastAPI (GCP Cloud Run)
+- **SSE**: sse-starlette
+- **Frontend**: Next.js + TypeScript (EventSource API)
 - **Vector DB**: Pinecone (선택적, 문제 임베딩용)
 
 ---
@@ -33,34 +35,51 @@
 ## Agent 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    API Gateway                          │
-│            (Next.js API Routes / FastAPI)               │
-└────────────┬───────────────────────┬────────────────────┘
-             │                       │
-             │                       │
-   ┌─────────▼────────┐    ┌────────▼──────────┐
-   │  문제 출제 Agent  │    │  수준 판별 Agent  │
-   │                  │    │                   │
-   │  - 문제 선택     │    │  - 답변 분석      │
-   │  - 롤플레이 대화 │    │  - 수준 평가      │
-   │  - 컨텍스트 관리 │    │  - 피드백 생성    │
-   └──────────────────┘    └───────────────────┘
-             │                       │
-             │                       │
-             └───────────┬───────────┘
-                         │
-                ┌────────▼──────────┐
-                │ 문제 생성 Agent   │
-                │  (Phase 3)        │
-                │  - 동적 문제 생성 │
-                └───────────────────┘
-                         │
-                         │
-                ┌────────▼──────────┐
-                │   Database        │
-                │   (Supabase)      │
-                └───────────────────┘
+┌────────────────────────────────────────────────┐
+│         Frontend (Next.js + EventSource)       │
+│  - SSE 클라이언트                              │
+│  - 실시간 진행 상황 표시                        │
+└────────────────────┬───────────────────────────┘
+                     │
+                     │ SSE (직접 통신)
+                     │
+┌────────────────────▼───────────────────────────┐
+│        FastAPI (GCP Cloud Run)                 │
+│  ┌──────────────────────────────────────────┐ │
+│  │        SSE Event Generator               │ │
+│  │  - 진행 상황 스트리밍                     │ │
+│  │  - 결과 스트리밍                         │ │
+│  └──────────────┬───────────────────────────┘ │
+│                 │                              │
+│  ┌──────────────▼───────────────────────────┐ │
+│  │       LangChain Agent Layer              │ │
+│  │                                           │ │
+│  │  ┌─────────────┐  ┌──────────────────┐  │ │
+│  │  │ 문제 출제   │  │  수준 판별       │  │ │
+│  │  │ Agent       │  │  Agent           │  │ │
+│  │  │             │  │                  │  │ │
+│  │  │ - 문제 선택 │  │  - 답변 분석     │  │ │
+│  │  │ - 롤플레이  │  │  - 5기준 평가    │  │ │
+│  │  │   대화      │  │  - 피드백 생성   │  │ │
+│  │  └─────────────┘  └──────────────────┘  │ │
+│  │                                           │ │
+│  │  ┌──────────────────────────────────┐   │ │
+│  │  │    문제 생성 Agent (Phase 3)     │   │ │
+│  │  │    - 동적 문제 생성              │   │ │
+│  │  └──────────────────────────────────┘   │ │
+│  └───────────────────────────────────────────┘ │
+└────────────────────┬───────────────────────────┘
+                     │
+                     │ Supabase Client
+                     │ (인증 검증용)
+                     │
+        ┌────────────▼──────────────┐
+        │   Database (Supabase)     │
+        │   - 사용자 정보 조회      │
+        │   - 문제 정보 조회        │
+        └───────────────────────────┘
+
+Note: DB 저장은 Frontend → Next.js API → Supabase 경로로 진행
 ```
 
 ---
@@ -652,36 +671,350 @@ async def evaluate_answer(request: EvaluationRequest):
 
 ---
 
-### TypeScript (Vercel AI SDK) 구현
+### FastAPI SSE 서버 구현
+
+```python
+# main.py
+from fastapi import FastAPI, Depends, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from sse_starlette.sse import EventSourceResponse
+import asyncio
+import json
+from typing import AsyncGenerator
+
+app = FastAPI()
+
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://your-app.vercel.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 인증 검증
+async def verify_token(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="No token")
+
+    token = authorization.replace("Bearer ", "")
+    user = supabase.auth.get_user(token)
+    return user
+
+# SSE 평가 엔드포인트
+@app.post("/evaluate")
+async def evaluate_answer(
+    request: EvaluationRequest,
+    user = Depends(verify_token)
+):
+    """답변 평가 SSE 스트리밍"""
+
+    async def event_generator() -> AsyncGenerator:
+        try:
+            # 1. 발화량 분석
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "utterance",
+                    "progress": 20,
+                    "message": "발화량 분석 중..."
+                })
+            }
+            await asyncio.sleep(0.5)
+
+            # 2. 문법 분석
+            yield {
+                "event": "progress",
+                "data": json.dumps({
+                    "step": "grammar",
+                    "progress": 40,
+                    "message": "문법 평가 중..."
+                })
+            }
+
+            # LangChain Agent 실행
+            result = await evaluation_agent.ainvoke({
+                "question": request.question,
+                "answer": request.answer,
+                "current_level": request.current_level
+            })
+
+            # 3. 최종 결과
+            yield {
+                "event": "complete",
+                "data": json.dumps({
+                    "progress": 100,
+                    "result": {
+                        "evaluated_level": result.evaluated_level,
+                        "scores": result.scores.dict(),
+                        "feedback": result.feedback.dict()
+                    }
+                })
+            }
+
+        except Exception as e:
+            yield {
+                "event": "error",
+                "data": json.dumps({"message": str(e)})
+            }
+
+    return EventSourceResponse(event_generator())
+
+# 롤플레이 대화 SSE
+@app.post("/roleplay/chat")
+async def roleplay_chat(
+    request: RoleplayChatRequest,
+    user = Depends(verify_token)
+):
+    """롤플레이 대화 SSE 스트리밍"""
+
+    async def event_generator() -> AsyncGenerator:
+        # LangChain Memory에서 대화 이력 로드
+        conversation = get_conversation(request.session_id)
+
+        # 사용자 메시지 추가
+        conversation.add_message(HumanMessage(content=request.message))
+
+        # AI 응답 생성 (스트리밍)
+        async for chunk in conversation.astream(request.message):
+            yield {
+                "event": "message",
+                "data": json.dumps({
+                    "content": chunk.content,
+                    "done": False
+                })
+            }
+
+        yield {
+            "event": "message",
+            "data": json.dumps({"done": True})
+        }
+
+    return EventSourceResponse(event_generator())
+```
+
+---
+
+### Frontend SSE 클라이언트 구현 (Next.js)
 
 ```typescript
-// app/api/question/route.ts
-import { OpenAI } from 'openai';
-import { StreamingTextResponse, LangChainStream } from 'ai';
+// app/components/AnswerEvaluation.tsx
+"use client";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { useState } from "react";
+import { useSupabase } from "@/lib/supabase-provider";
 
-export async function POST(req: Request) {
-  const { userLevel, topics } = await req.json();
+interface EvaluationProgress {
+  step: string;
+  progress: number;
+  message: string;
+}
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
-    messages: [
-      {
-        role: 'system',
-        content: QUESTION_AGENT_PROMPT,
+interface EvaluationResult {
+  evaluated_level: string;
+  scores: Record<string, number>;
+  feedback: any;
+}
+
+export default function AnswerEvaluation() {
+  const { session } = useSupabase();
+  const [progress, setProgress] = useState<EvaluationProgress | null>(null);
+  const [result, setResult] = useState<EvaluationResult | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+
+  const evaluateAnswer = async (
+    answer: string,
+    questionId: string,
+    question: string
+  ) => {
+    setIsEvaluating(true);
+    setProgress(null);
+    setResult(null);
+
+    const token = session?.access_token;
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL;
+
+    // 1. 평가 시작 (POST)
+    await fetch(`${fastApiUrl}/evaluate`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
-      {
-        role: 'user',
-        content: `User level: ${userLevel}, Topics: ${topics.join(', ')}`,
-      },
-    ],
-    temperature: 0.7,
-  });
+      body: JSON.stringify({
+        question,
+        answer,
+        current_level: "IM2",
+      }),
+    });
 
-  return Response.json(response.choices[0].message.content);
+    // 2. SSE 스트림 연결
+    const eventSource = new EventSource(
+      `${fastApiUrl}/evaluate?token=${token}`,
+      { withCredentials: true }
+    );
+
+    // 진행 상황 이벤트
+    eventSource.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data);
+      setProgress(data);
+    });
+
+    // 완료 이벤트
+    eventSource.addEventListener("complete", async (e) => {
+      const data = JSON.parse(e.data);
+      setResult(data.result);
+
+      // 3. 결과 저장 (Next.js API)
+      await fetch("/api/feedback/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId,
+          answer,
+          ...data.result,
+        }),
+      });
+
+      eventSource.close();
+      setIsEvaluating(false);
+    });
+
+    // 에러 처리
+    eventSource.addEventListener("error", (e) => {
+      console.error("SSE Error:", e);
+      eventSource.close();
+      setIsEvaluating(false);
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={() => evaluateAnswer("...", "123", "...")}
+        disabled={isEvaluating}
+        className="px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        {isEvaluating ? "평가 중..." : "평가 시작"}
+      </button>
+
+      {progress && (
+        <div className="space-y-2">
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all"
+              style={{ width: `${progress.progress}%` }}
+            />
+          </div>
+          <p className="text-sm text-gray-600">{progress.message}</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="border rounded-lg p-4">
+          <h3 className="font-bold">평가 결과: {result.evaluated_level}</h3>
+          <div className="mt-2">
+            <h4 className="font-semibold">점수:</h4>
+            <ul>
+              {Object.entries(result.scores).map(([key, value]) => (
+                <li key={key}>
+                  {key}: {value}/10
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### 롤플레이 SSE 클라이언트
+
+```typescript
+// app/components/RoleplayChat.tsx
+"use client";
+
+import { useState } from "react";
+
+export default function RoleplayChat({ sessionId }: { sessionId: string }) {
+  const [messages, setMessages] = useState<Array<{role: string, content: string}>>([]);
+  const [currentAiMessage, setCurrentAiMessage] = useState("");
+  const [isResponding, setIsResponding] = useState(false);
+
+  const sendMessage = async (userMessage: string) => {
+    // 사용자 메시지 추가
+    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setIsResponding(true);
+    setCurrentAiMessage("");
+
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL;
+    const token = session?.access_token;
+
+    // SSE 연결
+    const eventSource = new EventSource(
+      `${fastApiUrl}/roleplay/chat`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: userMessage,
+        })
+      }
+    );
+
+    eventSource.addEventListener("message", (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.done) {
+        // AI 응답 완료
+        setMessages(prev => [
+          ...prev,
+          { role: "assistant", content: currentAiMessage }
+        ]);
+        setCurrentAiMessage("");
+        setIsResponding(false);
+        eventSource.close();
+      } else {
+        // 스트리밍 중 (타이핑 효과)
+        setCurrentAiMessage(prev => prev + data.content);
+      }
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-96">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`p-2 rounded ${
+              msg.role === "user" ? "bg-blue-100 ml-auto" : "bg-gray-100"
+            }`}
+          >
+            {msg.content}
+          </div>
+        ))}
+        {currentAiMessage && (
+          <div className="p-2 rounded bg-gray-100">
+            {currentAiMessage}
+            <span className="animate-pulse">▋</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 ```
 
