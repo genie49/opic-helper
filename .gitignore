@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/*.tsbuildinfo
+
+# Backend (Python)
+backend/__pycache__/
+backend/.venv/
+backend/.uv/
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/.coverage
+
+# Shared
+shared/node_modules/
+
+# Temporary
+*.tmp
+.temp/
