@@ -1,14 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import PronunciationFeedback, { TranscriptionResult } from "@/components/PronunciationFeedback";
+import PronunciationFeedback from "@/components/PronunciationFeedback";
+import EvaluationFeedback from "@/components/EvaluationFeedback";
+import { evaluateAnswer } from "@/lib/services/mockEvaluation";
+import { TranscriptionResult } from "@/lib/whisper/WhisperService";
+
+interface DashboardStats {
+  totalAttempts: number;
+  masteredQuestions: number;
+  inProgressQuestions: number;
+  notAttemptedQuestions: number;
+  avgScore: string;
+}
 
 export default function PracticePage() {
   const [question, setQuestion] = useState<any>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [transcriptionResult, setTranscriptionResult] = useState<TranscriptionResult | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<any>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    loadDashboardStats();
+    loadQuestion();
+  }, []);
+
+  const loadDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/dashboard", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("데이터를 불러오는데 실패했습니다.");
+      }
+
+      const data = await response.json();
+      setStats(data.stats);
+    } catch (error) {
+      console.error("데이터 로드 실패:", error);
+    }
+  };
 
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
@@ -34,9 +73,45 @@ export default function PracticePage() {
     }
   };
 
-  const handleTranscriptionComplete = (result: TranscriptionResult) => {
+  const handleTranscriptionComplete = async (result: TranscriptionResult) => {
     setTranscriptionResult(result);
     setShowFeedback(true);
+
+    if (!question) return;
+
+    try {
+      setIsSaving(true);
+
+      const evaluation = evaluateAnswer(result.text, question.questionText);
+      setEvaluationResult(evaluation);
+
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionId: question.id,
+          answerText: result.text,
+          evaluatedLevel: evaluation.evaluated_level,
+          scores: evaluation.scores,
+          feedback: evaluation.feedback,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("피드백 저장에 실패했습니다.");
+      }
+
+      await loadDashboardStats();
+    } catch (error) {
+      console.error("평가 및 저장 실패:", error);
+      alert("평가 결과 저장에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -147,24 +222,37 @@ export default function PracticePage() {
 
           {/* Transcription & Feedback */}
           {showFeedback && transcriptionResult && (
-            <PronunciationFeedback result={transcriptionResult} />
+            <>
+              <PronunciationFeedback result={transcriptionResult} />
+              {isSaving && (
+                <div className="rounded-lg bg-card text-card-foreground shadow-sm border p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                    <p>평가 결과 저장 중...</p>
+                  </div>
+                </div>
+              )}
+              {!isSaving && evaluationResult && (
+                <EvaluationFeedback result={evaluationResult} />
+              )}
+            </>
           )}
 
           {/* Progress Card */}
           <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
             <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">오늘의 진행 상황</h3>
+              <h3 className="text-lg font-semibold mb-4">진행 상황</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">5</p>
-                  <p className="text-sm text-muted-foreground">완료</p>
+                  <p className="text-2xl font-bold">{stats?.masteredQuestions || 0}</p>
+                  <p className="text-sm text-muted-foreground">숙달됨</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">2</p>
+                  <p className="text-2xl font-bold">{stats?.inProgressQuestions || 0}</p>
                   <p className="text-sm text-muted-foreground">진행 중</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">8.2</p>
+                  <p className="text-2xl font-bold">{stats?.avgScore || "0.0"}</p>
                   <p className="text-sm text-muted-foreground">평균 점수</p>
                 </div>
               </div>
