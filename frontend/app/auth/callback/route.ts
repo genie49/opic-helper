@@ -28,32 +28,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=user_failed`);
     }
 
-    try {
-      // Check if user profile exists
-      const existingProfile = await db
-        .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, user.id))
-        .limit(1);
+     try {
+       // Check if user profile exists
+       const existingProfile = await db
+         .select()
+         .from(userProfiles)
+         .where(eq(userProfiles.userId, user.id))
+         .limit(1);
 
-      // Create user profile if it doesn't exist
-      if (existingProfile.length === 0) {
-        await db.insert(userProfiles).values({
-          userId: user.id,
-          displayName: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-          email: user.email || "",
-          avatarUrl: user.user_metadata?.avatar_url || null,
-          currentLevel: "IM2", // Default starting level
-          targetLevel: "IH",   // Default target level
-        });
+       // Create user profile if it doesn't exist
+       if (existingProfile.length === 0) {
+         // Get default level ID (IM2 = 5 based on schema)
+         const defaultLevelId = 5; // IM2
+         const targetLevelId = 8;   // IH
 
-        console.log("Created new user profile for:", user.email);
-      }
-    } catch (dbError) {
-      console.error("Database error during profile creation:", dbError);
-      // Continue to dashboard even if profile creation fails
-      // User can create profile manually later
-    }
+         await db.insert(userProfiles).values({
+           userId: user.id,
+           displayName: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+           currentLevelId: defaultLevelId, // Default starting level
+           targetLevelId: targetLevelId,   // Default target level
+         });
+
+         console.log("Created new user profile for:", user.email);
+       }
+     } catch (dbError) {
+       console.error("Database error during profile creation:", dbError);
+       // Continue to dashboard even if profile creation fails
+       // User can create profile manually later
+     }
 
     // Redirect to dashboard
     return NextResponse.redirect(`${origin}/dashboard`);
