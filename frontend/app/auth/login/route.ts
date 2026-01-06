@@ -13,12 +13,13 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error("OAuth error:", error);
-    return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
+    return NextResponse.redirect(new URL("/login?error=auth_failed", request.url), { status: 303 });
   }
 
   if (data.url) {
-    return NextResponse.redirect(data.url);
+    // Use 303 status to convert POST to GET redirect
+    return NextResponse.redirect(data.url, { status: 303 });
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
 }
