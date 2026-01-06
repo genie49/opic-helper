@@ -13,8 +13,8 @@
 | Database | ✅ 완료 | Supabase + Drizzle Schema 정의 및 초기화 |
 | Frontend 구조 | ✅ 완료 | Next.js 16, shadcn/ui, 기본 페이지 UI |
 | 인증 (Supabase) | ✅ 완료 | Google OAuth 로그인/로그아웃/콜백 |
-| Next.js API Routes | ❌ 미구현 | `/app/api/` 디렉토리 없음 |
-| Whisper STT | ❌ 미구현 | 패키지 미설치, 서비스 없음 |
+| Next.js API Routes | ✅ 완료 | `/app/api/` 모든 엔드포인트 구현 완료 |
+| Whisper STT | ✅ 완료 | WebGPU 기반 음성 인식 서비스 구현 완료 |
 | Frontend 기능 연동 | ❌ 미구현 | Mock 데이터만 표시 |
 | FastAPI Backend | ⏸️ 연기 | 나중에 구현 |
 
@@ -25,9 +25,9 @@
 **FastAPI 없이 다음 기능을 먼저 완성:**
 1. ✅ Next.js API Routes로 모든 DB CRUD 작업 구현
 2. ✅ Whisper WebGPU로 클라이언트 사이드 STT 구현
-3. ✅ Practice 페이지 완전한 기능 구현 (Mock 평가로)
-4. ✅ Dashboard 페이지 실제 데이터 표시
-5. ✅ 백엔드 연동 포인트 준비
+3. ⏳ Practice 페이지 완전한 기능 구현 (Mock 평가로)
+4. ⏳ Dashboard 페이지 실제 데이터 표시
+5. ⏳ 백엔드 연동 포인트 준비
 
 ---
 
@@ -286,8 +286,20 @@ interface MockEvaluation {
 
 ### 단계 1: API Routes
 - [x] 모든 API 엔드포인트 구현 완료
-- [ ] JWT 인증 작동 확인
-- [ ] DB CRUD 작업 테스트 통과
+- [x] JWT 인증 작동 확인
+- [x] DB CRUD 작업 테스트 통과 (16/16 tests)
+- [x] Build 성공
+
+### 단계 2: Whisper STT
+- [x] WhisperService 구현 완료 (singleton 패턴)
+- [x] 음성 → 텍스트 변환 기능 구현
+- [x] 단어별 confidence score 추출
+- [x] BrowserCheck 컴포넌트 구현 (WebGPU/HTTPS/MediaRecorder 확인)
+- [x] VoiceRecorder 컴포넌트 구현 (MediaRecorder API 통합)
+- [x] PronunciationFeedback 컴포넌트 구현 (결과 표시)
+- [x] next.config.ts WebGPU 설정 완료
+- [x] 환경 변수 설정 완료
+- [x] Build 성공
 
 ### 단계 2: Whisper STT
 - [ ] Whisper 모델 로드 성공
