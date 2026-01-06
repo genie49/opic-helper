@@ -7,6 +7,9 @@ interface Props {
   children: React.ReactNode;
 }
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
 export default function BrowserCheck({ children }: Props) {
   const [compatibility, setCompatibility] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,10 +22,13 @@ export default function BrowserCheck({ children }: Props) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">브라우저 호환성 확인 중...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-4">
+          <div className="relative h-16 w-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+            <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+          </div>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">호환성 체크 중...</p>
         </div>
       </div>
     );
@@ -30,52 +36,55 @@ export default function BrowserCheck({ children }: Props) {
 
   if (!compatibility || !compatibility.isCompatible) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">
-            브라우저 호환성 문제
-          </h2>
-
-          <div className="space-y-2 mb-6">
-            <div className="flex items-center gap-2">
-              {compatibility?.webgpu ? '✅' : '❌'}
-              <span>WebGPU 지원</span>
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+        <Card className="max-w-md w-full border-none shadow-2xl shadow-slate-200 overflow-hidden">
+          <CardHeader className="bg-rose-500 text-white pt-10 pb-8 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
-            <div className="flex items-center gap-2">
-              {compatibility?.https ? '✅' : '❌'}
-              <span>HTTPS 연결</span>
+            <CardTitle className="text-2xl font-black">브라우저 호환성 경고</CardTitle>
+            <CardDescription className="text-rose-100/80 font-medium">현재 브라우저에서는 서비스 이용이 제한됩니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 space-y-8">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'WebGPU 지원', ok: compatibility?.webgpu },
+                { label: 'HTTPS 연결', ok: compatibility?.https },
+                { label: '음성 녹음', ok: compatibility?.mediaRecorder },
+                { label: '최신 엔진', ok: compatibility?.isChrome || compatibility?.isEdge },
+              ].map((item, i) => (
+                <div key={i} className={`p-3 rounded-xl border flex flex-col items-center gap-2 ${item.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
+                  {item.ok ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  )}
+                  <span className="text-[10px] font-black uppercase tracking-wider">{item.label}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              {compatibility?.mediaRecorder ? '✅' : '❌'}
-              <span>음성 녹음 지원</span>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-slate-800">권장 브라우저:</h4>
+              <ul className="grid grid-cols-1 gap-2">
+                <li className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 text-sm font-semibold text-slate-600 border border-slate-100">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  Google Chrome 113+
+                </li>
+                <li className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 text-sm font-semibold text-slate-600 border border-slate-100">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  Microsoft Edge 113+
+                </li>
+              </ul>
             </div>
-            {compatibility?.isChrome && (
-              <div className="flex items-center gap-2">
-                ✅
-                <span>Chrome 브라우저</span>
-              </div>
-            )}
-          </div>
 
-          <p className="text-gray-700 mb-4">
-            이 서비스를 이용하려면 다음 브라우저를 사용하세요:
-          </p>
-
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 mb-6">
-            <li>Google Chrome 113 이상</li>
-            <li>Microsoft Edge 113 이상</li>
-            <li>Android Chrome 121 이상</li>
-          </ul>
-
-          <a
-            href="https://www.google.com/chrome/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Chrome 다운로드
-          </a>
-        </div>
+            <Button asChild className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20">
+              <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer">
+                Chrome 다운로드 하기
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

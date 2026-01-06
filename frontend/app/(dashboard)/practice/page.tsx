@@ -135,147 +135,202 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">연습하기</h1>
-        <p className="text-muted-foreground">
-          맞춤형 문제로 OPIc 실력을 향상시키세요
-        </p>
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <span className="p-2 bg-primary/10 rounded-xl text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+            </span>
+            실전 연습
+          </h1>
+          <p className="mt-1 text-muted-foreground ml-12">
+            AI가 추천하는 맞춤형 문제로 실전 감각을 익히세요.
+          </p>
+        </div>
+        <div className="flex gap-2 ml-12 md:ml-0">
+          <Button variant="outline" size="lg" onClick={handleSkipQuestion} className="hover:bg-slate-100 transition-colors">
+            문제 건너뛰기
+          </Button>
+          <Button 
+            variant="default" 
+            size="lg" 
+            onClick={handleNextQuestion} 
+            disabled={!showFeedback}
+            className="shadow-lg shadow-primary/20"
+          >
+            다음 문제 →
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Sidebar - Question Info */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">문제 정보</h3>
+      <div className="grid gap-8 lg:grid-cols-12">
+        {/* Left Sidebar - Question Info (4 columns) */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="border-none shadow-lg shadow-slate-200/50 overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100">
+              <CardTitle className="text-lg font-bold">문제 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
               {question ? (
                 <>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">주제</p>
-                    <p className="text-2xl font-bold text-primary">{question.topic || "로딩 중..."}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">주제</p>
+                    <p className="text-xl font-bold text-primary">{question.topic || "로딩 중..."}</p>
                   </div>
-                  <div className="space-y-2" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">문제 유형</p>
-                    <p className="text-lg">{question?.questionType || "-"}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">문제 유형</p>
+                      <p className="font-semibold text-slate-700">{question?.questionType || "-"}</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">목표 시간</p>
+                      <p className="font-semibold text-slate-700">90초</p>
+                    </div>
                   </div>
-                  <div className="space-y-2" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">난이도</p>
-                    <p className="text-lg">{question?.difficultyLevel || "-"}</p>
-                  </div>
-                  <div className="space-y-2" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">목표 시간</p>
-                    <p className="text-lg">90초</p>
+                  <div className="pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">난이도</p>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold uppercase">
+                        Level {question?.difficultyLevel || "-"}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(parseInt(question?.difficultyLevel || "0") / 5) * 100}%` }} />
+                    </div>
                   </div>
                 </>
               ) : (
-                <div className="animate-pulse text-sm text-muted-foreground">
-                  로딩 중...
+                <div className="space-y-4">
+                  <div className="h-12 bg-slate-100 animate-pulse rounded-lg" />
+                  <div className="h-12 bg-slate-100 animate-pulse rounded-lg" />
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">학습 팁</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• 도입 - 상황 설정</li>
-                <li>• 전개 - 구체적 경험</li>
-                <li>• 마무리 - 느낀 점</li>
+          <Card className="border-none shadow-lg shadow-slate-200/50 overflow-hidden bg-indigo-50 border-l-4 border-l-indigo-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold text-indigo-800 uppercase tracking-wider">학습 팁</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                <li className="flex gap-3 text-sm text-indigo-900/80 leading-relaxed">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700 mt-0.5">1</span>
+                  도입부에서 상황을 명확히 설정하세요.
+                </li>
+                <li className="flex gap-3 text-sm text-indigo-900/80 leading-relaxed">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700 mt-0.5">2</span>
+                  구체적인 형용사와 부사를 사용하여 경험을 묘사하세요.
+                </li>
+                <li className="flex gap-3 text-sm text-indigo-900/80 leading-relaxed">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700 mt-0.5">3</span>
+                  자신의 감정이나 느낀 점으로 깔끔하게 마무리하세요.
+                </li>
               </ul>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-none shadow-lg shadow-slate-200/50 overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-3">
+              <CardTitle className="text-sm font-bold">오늘의 학습 현황</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-xl font-bold text-primary">{stats?.masteredQuestions || 0}</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">숙달</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-xl font-bold text-slate-700">{stats?.avgScore || "0.0"}</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">평점</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Content - Question & Answer */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">문제</h3>
-              <p className="text-muted-foreground text-sm">
-                아래 문제에 답변해주세요
-              </p>
+        {/* Main Content - Question & Answer (8 columns) */}
+        <div className="lg:col-span-8 space-y-8">
+          <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 flex flex-row items-center justify-between pb-4">
+              <div>
+                <CardTitle className="text-xl font-bold">문제</CardTitle>
+                <CardDescription>질문을 잘 듣고(또는 읽고) 답변해 주세요.</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/5 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-8 pb-10 px-8">
               {question && (
-                <div className="bg-muted p-6 rounded-lg">
-                  <p className="text-lg leading-relaxed text-foreground">
-                    {question.questionText}
+                <div className="relative">
+                  <div className="absolute -left-4 top-0 w-1 h-full bg-primary/20 rounded-full" />
+                  <p className="text-2xl font-medium leading-relaxed text-slate-800 italic">
+                    "{question.questionText}"
                   </p>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">답변 녹음</h3>
-              <p className="text-muted-foreground text-sm">
-                준비가 되면 녹음 버튼을 눌러주세요
-              </p>
-
-              <VoiceRecorder onTranscriptionComplete={handleTranscriptionComplete} />
-            </div>
-          </div>
+          <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+              <CardTitle className="text-xl font-bold">답변 녹음</CardTitle>
+              <CardDescription>버튼을 클릭하여 답변을 시작하세요. (최대 2분)</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-10 pb-12">
+              <div className="flex flex-col items-center">
+                <VoiceRecorder onTranscriptionComplete={handleTranscriptionComplete} />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Transcription & Feedback */}
           {showFeedback && transcriptionResult && (
-            <>
-              <PronunciationFeedback result={transcriptionResult} />
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden bg-white">
+                <CardHeader className="bg-emerald-50 border-b border-emerald-100 pb-4">
+                  <CardTitle className="text-xl font-bold text-emerald-800">텍스트 분석 결과</CardTitle>
+                  <CardDescription className="text-emerald-700/70">음성 인식 결과를 확인하고 발음을 체크해보세요.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <PronunciationFeedback result={transcriptionResult} />
+                </CardContent>
+              </Card>
+              
               {isSaving && (
-                <div className="rounded-lg bg-card text-card-foreground shadow-sm border p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                    <p>평가 결과 저장 중...</p>
+                <Card className="border-none shadow-xl shadow-slate-200/50 p-12 flex flex-col items-center justify-center space-y-4">
+                  <div className="relative h-16 w-16">
+                    <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+                    <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <h4 className="font-bold text-slate-800">AI 정밀 평가 중</h4>
+                    <p className="text-sm text-muted-foreground mt-1">답변 내용을 분석하여 등급을 산출하고 있습니다...</p>
+                  </div>
+                </Card>
+              )}
+              
+              {!isSaving && evaluationResult && (
+                <div className="animate-in zoom-in-95 duration-500">
+                  <EvaluationFeedback result={evaluationResult} />
+                  <div className="mt-8 flex justify-center">
+                    <Button 
+                      size="xl" 
+                      onClick={handleNextQuestion}
+                      className="h-16 px-12 rounded-2xl shadow-2xl shadow-primary/30 font-bold transition-all hover:scale-105 active:scale-95"
+                    >
+                      다음 문제 풀기
+                    </Button>
                   </div>
                 </div>
               )}
-              {!isSaving && evaluationResult && (
-                <EvaluationFeedback result={evaluationResult} />
-              )}
-            </>
-          )}
-
-          {/* Progress Card */}
-          <div className="rounded-lg bg-card text-card-foreground shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">진행 상황</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{stats?.masteredQuestions || 0}</p>
-                  <p className="text-sm text-muted-foreground">숙달됨</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{stats?.inProgressQuestions || 0}</p>
-                  <p className="text-sm text-muted-foreground">진행 중</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{stats?.avgScore || "0.0"}</p>
-                  <p className="text-sm text-muted-foreground">평균 점수</p>
-                </div>
-              </div>
             </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleSkipQuestion}
-            className="flex-1 px-4 py-2 bg-card hover:bg-accent/50 hover:bg-accent/50 border border-input bg-background text-foreground hover:bg-accent/50"
-          >
-            문제 건너뛰기
-          </button>
-          <button
-            onClick={handleNextQuestion}
-            disabled={showFeedback}
-            className="flex-1 px-4 py-2 bg-primary text-primary hover:bg-primary/90"
-          >
-            다음 문제
-          </button>
+          )}
         </div>
       </div>
     </div>
+  );
   );
 }
