@@ -41,6 +41,3 @@ shared/node_modules/
 # Temporary
 *.tmp
 .temp/
-
-# opencode
-.opencode/
