@@ -285,7 +285,7 @@ interface MockEvaluation {
 ## ✅ 완료 기준
 
 ### 단계 1: API Routes
-- [ ] 모든 API 엔드포인트 구현 완료
+- [x] 모든 API 엔드포인트 구현 완료
 - [ ] JWT 인증 작동 확인
 - [ ] DB CRUD 작업 테스트 통과
 
