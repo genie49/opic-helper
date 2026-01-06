@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET, POST } from '@/app/api/survey/route';
 import { db } from '@/lib/db';
-import { surveySelections } from '@/lib/db/schema';
 
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
@@ -25,21 +24,20 @@ describe('Survey API', () => {
 
   describe('GET /api/survey', () => {
     it('should return user survey selections', async () => {
-      const now = new Date();
       const mockSelections = [
         {
           id: 'survey-1',
           userId: mockUserId,
           category: 'residence',
           selection: '아파트',
-          createdAt: now,
+          createdAt: '2024-01-15T10:30:00Z',
         },
         {
           id: 'survey-2',
           userId: mockUserId,
           category: 'leisure',
           selection: '카페',
-          createdAt: now,
+          createdAt: '2024-01-15T10:30:00Z',
         },
       ];
 

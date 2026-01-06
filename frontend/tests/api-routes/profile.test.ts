@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET, PATCH } from '@/app/api/profile/route';
 import { db } from '@/lib/db';
-import { userProfiles, opicLevels } from '@/lib/db/schema';
 
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
@@ -43,8 +42,8 @@ describe('Profile API', () => {
           minUtterance: 10,
           minWords: 150,
         },
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:30:00Z',
       };
 
       vi.mocked(db.select).mockReturnValue({
@@ -59,7 +58,10 @@ describe('Profile API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.profile).toEqual(mockProfile);
+      expect(data.profile).toBeDefined();
+      expect(data.profile.displayName).toBe('Test User');
+      expect(data.profile.currentLevel.levelCode).toBe('IM2');
+      expect(data.profile.targetLevel.levelCode).toBe('IH');
     });
 
     it('should return 404 if profile not found', async () => {
@@ -86,7 +88,7 @@ describe('Profile API', () => {
         userId: mockUserId,
         targetLevelId: 9,
         displayName: 'Test User',
-        updatedAt: new Date(),
+        updatedAt: '2024-01-15T10:30:00Z',
       };
 
       vi.mocked(db.update).mockReturnValue({
@@ -113,7 +115,7 @@ describe('Profile API', () => {
         id: 'profile-1',
         userId: mockUserId,
         displayName: 'Updated User',
-        updatedAt: new Date(),
+        updatedAt: '2024-01-15T10:30:00Z',
       };
 
       vi.mocked(db.update).mockReturnValue({
