@@ -44,3 +44,4 @@ shared/node_modules/
 
 # opencode
 .opencode/
+opencode.jsonc
