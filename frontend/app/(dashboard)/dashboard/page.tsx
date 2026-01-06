@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface DashboardStats {
   totalAttempts: number;
@@ -39,6 +40,7 @@ interface RecentFeedback {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentFeedbacks, setRecentFeedbacks] = useState<RecentFeedback[]>([]);
@@ -179,11 +181,28 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full" size="lg">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => router.push("/practice")}
+            >
               문제 풀기 시작
             </Button>
-            <Button className="w-full" variant="outline" size="lg">
+            <Button
+              className="w-full"
+              variant="outline"
+              size="lg"
+              onClick={() => router.push("/roleplay")}
+            >
               롤플레이 연습
+            </Button>
+            <Button
+              className="w-full"
+              variant="outline"
+              size="lg"
+              onClick={() => router.push("/survey")}
+            >
+              서베이 수정
             </Button>
           </CardContent>
         </Card>
