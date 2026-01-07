@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import PronunciationFeedback from "@/components/PronunciationFeedback";
 import EvaluationFeedback from "@/components/EvaluationFeedback";
@@ -27,6 +28,7 @@ interface Question {
 }
 
 export default function RoleplayPage() {
+  const router = useRouter();
   const [question, setQuestion] = useState<Question | null>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [currentInteraction, setCurrentInteraction] = useState(0);
@@ -40,6 +42,7 @@ export default function RoleplayPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isConversationStarted, setIsConversationStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuestion();
@@ -47,11 +50,18 @@ export default function RoleplayPage() {
 
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
+    setError(null);
     try {
       const response = await fetch("/api/question/next");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        if (errorData.code === "SURVEY_NOT_COMPLETED") {
+          setError(errorData.error || "서베이를 먼저 완성해주세요.");
+          return;
+        }
+
         throw new Error(errorData.error || "롤플레이 문제를 불러오는데 실패했습니다.");
       }
 
@@ -161,6 +171,33 @@ export default function RoleplayPage() {
   const handleNextQuestion = () => {
     loadQuestion();
   };
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="border-none shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+              <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-2">서베이가 필요합니다</h3>
+                <p className="text-slate-600 mb-6 max-w-md">{error}</p>
+              </div>
+              <Button
+                size="lg"
+                onClick={() => router.push("/survey")}
+                className="shadow-lg shadow-amber-200"
+              >
+                서베이 완성하기 →
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoadingQuestion) {
     return (
