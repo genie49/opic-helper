@@ -52,12 +52,7 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/dashboard", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/dashboard");
 
       if (!response.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다.");
@@ -121,14 +116,14 @@ export default function DashboardPage() {
             <CardContent className="pt-2 pb-8">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="text-7xl font-black tracking-tighter">
-                  {user.currentLevel.levelCode}
+                  {user.currentLevel?.levelCode || "-"}
                 </div>
                 <div>
                   <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-widest backdrop-blur-sm mb-2">
-                    {user.currentLevel.levelName}
+                    {user.currentLevel?.levelName || "미설정"}
                   </div>
                   <p className="text-primary-foreground/70 text-sm">
-                    목표: <span className="text-white font-semibold">{user.targetLevel.levelCode}</span> ({user.targetLevel.levelName})
+                    목표: <span className="text-white font-semibold">{user.targetLevel?.levelCode || "-"}</span> ({user.targetLevel?.levelName || "미설정"})
                   </p>
                 </div>
               </div>

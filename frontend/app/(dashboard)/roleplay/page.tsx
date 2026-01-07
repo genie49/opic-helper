@@ -48,12 +48,7 @@ export default function RoleplayPage() {
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/question/next", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/question");
 
       if (!response.ok) {
         throw new Error("롤플레이 문제를 불러오는데 실패했습니다.");
