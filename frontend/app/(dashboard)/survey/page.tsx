@@ -238,7 +238,7 @@ export default function SurveyPage() {
             <CardContent className="pt-8">
               <div className="flex flex-col items-center mb-8">
                 <div className="relative w-32 h-32 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90">
+                   <svg className="w-full h-full -rotate-90">
                     <circle
                       cx="64"
                       cy="64"
@@ -256,7 +256,7 @@ export default function SurveyPage() {
                       stroke="currentColor"
                       strokeWidth="8"
                       strokeDasharray={364.4}
-                      strokeDashoffset={364.4 - (364.4 * selectedItems.size) / 12}
+                      strokeDashoffset={364.4 - Math.min(364.4 * selectedItems.size / 6, 364.4)}
                       className="text-primary transition-all duration-500 ease-out"
                     />
                   </svg>
@@ -267,25 +267,28 @@ export default function SurveyPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 font-medium">진행률</span>
-                  <span className="font-bold text-primary">{Math.round((selectedItems.size / 6) * 100)}%</span>
-                </div>
-                {selectedItems.size < 6 ? (
-                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                    <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                      최소 <span className="font-bold">6개</span> 이상의 주제를 선택해야 연습을 시작할 수 있습니다. (현재 {6 - selectedItems.size}개 더 필요)
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                    <p className="text-xs text-emerald-700 leading-relaxed font-medium">
-                      충분한 주제가 선택되었습니다! 이제 실전 연습이 가능합니다.
-                    </p>
-                  </div>
-                )}
-              </div>
+               <div className="space-y-4">
+                 <div className="flex justify-between items-center text-sm">
+                   <span className="text-slate-500 font-medium">진행률</span>
+                   <span className="font-bold text-primary">
+                     {Math.min(Math.round((selectedItems.size / 6) * 100), 100)}%
+                   </span>
+                 </div>
+                 {selectedItems.size < 6 ? (
+                   <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                     <p className="text-xs text-amber-700 leading-relaxed font-medium">
+                       최소 <span className="font-bold">6개</span> 이상의 주제를 선택해야 연습을 시작할 수 있습니다. (현재 {6 - selectedItems.size}개 더 필요)
+                     </p>
+                   </div>
+                 ) : (
+                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                     <p className="text-xs text-emerald-700 leading-relaxed font-medium">
+                       충분한 주제가 선택되었습니다! 이제 실전 연습이 가능합니다.
+                       {selectedItems.size > 6 && ` 추가로 ${selectedItems.size - 6}개의 주제가 선택되었습니다.`}
+                     </p>
+                   </div>
+                 )}
+               </div>
             </CardContent>
           </Card>
         </div>
