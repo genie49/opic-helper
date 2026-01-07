@@ -8,8 +8,12 @@ import {
   questions,
 } from "@/lib/db/schema";
 import { eq, sql, and } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { withAuth } from "@/lib/api-utils/auth";
 import { handleApiError } from "@/lib/api-utils/error";
+
+const currentLevelTable = alias(opicLevels, "current_level");
+const targetLevelTable = alias(opicLevels, "target_level");
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (userId) => {
@@ -20,28 +24,28 @@ export async function GET(request: NextRequest) {
           userId: userProfiles.userId,
           displayName: userProfiles.displayName,
           currentLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
+            id: currentLevelTable.id,
+            levelCode: currentLevelTable.levelCode,
+            levelName: currentLevelTable.levelName,
+            minUtterance: currentLevelTable.minUtterance,
+            minWords: currentLevelTable.minWords,
           },
           targetLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
+            id: targetLevelTable.id,
+            levelCode: targetLevelTable.levelCode,
+            levelName: targetLevelTable.levelName,
+            minUtterance: targetLevelTable.minUtterance,
+            minWords: targetLevelTable.minWords,
           },
         })
         .from(userProfiles)
         .leftJoin(
-          opicLevels,
-          eq(userProfiles.currentLevelId, opicLevels.id)
+          currentLevelTable,
+          eq(userProfiles.currentLevelId, currentLevelTable.id)
         )
         .leftJoin(
-          opicLevels,
-          eq(userProfiles.targetLevelId, opicLevels.id)
+          targetLevelTable,
+          eq(userProfiles.targetLevelId, targetLevelTable.id)
         )
         .where(eq(userProfiles.userId, userId))
         .limit(1);
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
           questionId: feedbacks.questionId,
           questionText: questions.questionText,
           evaluatedLevel: feedbacks.evaluatedLevel,
-          totalScore: sql<number>`(${feedbacks.scores}->>'utterance')::int + (${feedbacks.scores}->>'grammar')::int + (${feedbacks.scores}->>'vocabulary')::int + (${feedbacks.scores}->>'structure')::int + (${feedbacks.scores}->>'pronunciation')::int)`.as(
+          totalScore: sql<number>`(${feedbacks.scores}->>'utterance')::int + (${feedbacks.scores}->>'grammar')::int + (${feedbacks.scores}->>'vocabulary')::int + (${feedbacks.scores}->>'structure')::int + (${feedbacks.scores}->>'pronunciation')::int`.as(
             "total_score"
           ),
           createdAt: feedbacks.createdAt,
