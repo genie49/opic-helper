@@ -6,6 +6,8 @@ import PronunciationFeedback from "@/components/PronunciationFeedback";
 import EvaluationFeedback from "@/components/EvaluationFeedback";
 import { evaluateAnswer } from "@/lib/services/mockEvaluation";
 import { TranscriptionResult } from "@/lib/whisper/WhisperService";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DashboardStats {
   totalAttempts: number;
