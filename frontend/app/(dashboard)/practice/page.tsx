@@ -33,12 +33,7 @@ export default function PracticePage() {
 
   const loadDashboardStats = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/dashboard", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/dashboard");
 
       if (!response.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다.");
@@ -54,12 +49,7 @@ export default function PracticePage() {
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/question/next", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/question");
 
       if (!response.ok) {
         throw new Error("문제를 불러오는데 실패했습니다.");
@@ -87,11 +77,9 @@ export default function PracticePage() {
       const evaluation = evaluateAnswer(result.text, question.questionText);
       setEvaluationResult(evaluation);
 
-      const token = localStorage.getItem("access_token");
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
