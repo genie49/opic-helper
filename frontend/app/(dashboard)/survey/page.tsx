@@ -259,18 +259,18 @@ export default function SurveyPage() {
               <CardDescription className="text-slate-400">각 카테고리당 최소 1개 이상 선택해야 합니다. (총 5개 카테고리)</CardDescription>
             </CardHeader>
             <CardContent className="pt-8">
-              <div className="flex flex-col items-center mb-8">
-                <div className="relative w-32 h-32 flex items-center justify-center">
-                   <svg className="w-full h-full -rotate-90">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="58"
-                      fill="transparent"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      className="text-slate-100"
-                    />
+               <div className="flex flex-col items-center mb-8">
+                 <div className="relative w-32 h-32 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90">
+                     <circle
+                       cx="64"
+                       cy="64"
+                       r="58"
+                       fill="transparent"
+                       stroke="currentColor"
+                       strokeWidth="8"
+                       className="text-slate-100"
+                     />
                     <circle
                       cx="64"
                       cy="64"
@@ -279,13 +279,13 @@ export default function SurveyPage() {
                       stroke="currentColor"
                       strokeWidth="8"
                       strokeDasharray={364.4}
-                      strokeDashoffset={364.4 - Math.min(364.4 * selectedItems.size / 6, 364.4)}
+                      strokeDashoffset={364.4 - Math.min(364.4 * overallProgress / 100, 364.4)}
                       className="text-primary transition-all duration-500 ease-out"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-slate-800">{selectedItems.size}</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selected</span>
+                    <span className="text-3xl font-black text-slate-800">{overallProgress}%</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progress</span>
                   </div>
                 </div>
               </div>
