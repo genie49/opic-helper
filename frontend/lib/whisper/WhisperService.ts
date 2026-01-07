@@ -16,7 +16,6 @@ class WhisperService {
   private pipeline: any = null;
   private modelName: string = 'Xenova/whisper-tiny.en';
   private isLoading: boolean = false;
-  private Transformers: any = null;
 
   private constructor() {}
 
@@ -25,19 +24,6 @@ class WhisperService {
       WhisperService.instance = new WhisperService();
     }
     return WhisperService.instance;
-  }
-
-  async loadTransformers(): Promise<void> {
-    if (this.Transformers) return;
-
-    try {
-      // Dynamic import to avoid build issues
-      const transformersModule = await import('@xenova/transformers');
-      this.Transformers = transformersModule;
-    } catch (error) {
-      console.error('❌ Transformers 모듈 로드 실패:', error);
-      throw new Error('음성 인식 모듈을 로드할 수 없습니다.');
-    }
   }
 
   async initialize(onProgress?: (progress: number) => void): Promise<void> {
@@ -52,10 +38,10 @@ class WhisperService {
     try {
       this.isLoading = true;
 
-      await this.loadTransformers();
+      // Import transformers module
+      const Transformers = await import('@xenova/transformers');
 
-      const { pipeline } = this.Transformers;
-      this.pipeline = await pipeline(
+      this.pipeline = await Transformers.pipeline(
         'automatic-speech-recognition',
         this.modelName,
         {
@@ -70,7 +56,7 @@ class WhisperService {
       console.log('✅ Whisper 초기화 완료');
     } catch (error) {
       console.error('❌ Whisper 초기화 실패:', error);
-      throw error;
+      throw new Error('음성 인식 모델을 초기화할 수 없습니다. 나중에 다시 시도해주세요.');
     } finally {
       this.isLoading = false;
     }
