@@ -52,12 +52,7 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/dashboard", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/dashboard");
 
       if (!response.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다.");
