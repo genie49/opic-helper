@@ -36,26 +36,18 @@ export default function ProfilePage() {
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("access_token");
-      
-      // Load profile and levels in parallel
-      const [profileRes, levelsRes] = await Promise.all([
-        fetch("/api/profile", {
-          headers: { "Authorization": `Bearer ${token}` },
-        }),
-        // Assuming there might be a mastery/levels API or we use a fixed list for now
-        // For simplicity in this mock-heavy stage, let's use fixed levels or fetch if available
-        fetch("/api/mastery", {
-          headers: { "Authorization": `Bearer ${token}` },
-        })
-      ]);
 
-      if (profileRes.ok) {
-        const data = await profileRes.json();
-        setProfile(data.profile);
-        setDisplayName(data.profile.displayName || "");
-        setTargetLevelId(data.profile.targetLevelId || "");
+      const profileRes = await fetch("/api/profile");
+
+      if (!profileRes.ok) {
+        const errorData = await profileRes.json().catch(() => ({}));
+        throw new Error(errorData.error || "프로필 데이터를 불러오는데 실패했습니다.");
       }
+
+      const data = await profileRes.json();
+      setProfile(data.profile);
+      setDisplayName(data.profile.displayName || "");
+      setTargetLevelId(data.profile.targetLevelId || "");
 
       // Mock levels if mastery API doesn't return them directly in the expected format
       const mockLevels = [
@@ -78,11 +70,9 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const token = localStorage.getItem("access_token");
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -91,8 +81,11 @@ export default function ProfilePage() {
         }),
       });
 
-      if (!response.ok) throw new Error("저장 실패");
-      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "저장 실패");
+      }
+
       alert("프로필이 업데이트되었습니다.");
       router.push("/dashboard");
     } catch (error) {

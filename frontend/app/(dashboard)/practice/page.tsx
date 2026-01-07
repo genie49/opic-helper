@@ -6,6 +6,8 @@ import PronunciationFeedback from "@/components/PronunciationFeedback";
 import EvaluationFeedback from "@/components/EvaluationFeedback";
 import { evaluateAnswer } from "@/lib/services/mockEvaluation";
 import { TranscriptionResult } from "@/lib/whisper/WhisperService";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface DashboardStats {
   totalAttempts: number;
@@ -31,15 +33,11 @@ export default function PracticePage() {
 
   const loadDashboardStats = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/dashboard", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/dashboard");
 
       if (!response.ok) {
-        throw new Error("데이터를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "데이터를 불러오는데 실패했습니다.");
       }
 
       const data = await response.json();
@@ -52,15 +50,11 @@ export default function PracticePage() {
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/question/next", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/question/next");
 
       if (!response.ok) {
-        throw new Error("문제를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "문제를 불러오는데 실패했습니다.");
       }
 
       const data = await response.json();
@@ -85,11 +79,9 @@ export default function PracticePage() {
       const evaluation = evaluateAnswer(result.text, question.questionText);
       setEvaluationResult(evaluation);
 
-      const token = localStorage.getItem("access_token");
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -102,7 +94,8 @@ export default function PracticePage() {
       });
 
       if (!response.ok) {
-        throw new Error("피드백 저장에 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "피드백 저장에 실패했습니다.");
       }
 
       await loadDashboardStats();
@@ -331,6 +324,5 @@ export default function PracticePage() {
         </div>
       </div>
     </div>
-  );
   );
 }

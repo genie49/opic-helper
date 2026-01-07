@@ -96,15 +96,14 @@ export default function SurveyPage() {
   const loadExistingSurvey = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/survey", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/survey");
 
       if (!response.ok) {
-        throw new Error("서베이 데이터를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("로그인이 필요합니다.");
+        }
+        throw new Error(errorData.error || "서베이 데이터를 불러오는데 실패했습니다.");
       }
 
       const data = await response.json();
@@ -153,18 +152,20 @@ export default function SurveyPage() {
         return { category, selection };
       });
 
-      const token = localStorage.getItem("access_token");
       const response = await fetch("/api/survey", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ selections }),
       });
 
       if (!response.ok) {
-        throw new Error("서베이 저장에 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("로그인이 필요합니다.");
+        }
+        throw new Error(errorData.error || "서베이 저장에 실패했습니다.");
       }
 
       const data = await response.json();

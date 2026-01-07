@@ -19,32 +19,59 @@ export async function GET(request: NextRequest) {
           id: userProfiles.id,
           userId: userProfiles.userId,
           displayName: userProfiles.displayName,
-          currentLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
-          },
-          targetLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
-          },
+          currentLevelId: userProfiles.currentLevelId,
+          targetLevelId: userProfiles.targetLevelId,
         })
         .from(userProfiles)
-        .leftJoin(
-          opicLevels,
-          eq(userProfiles.currentLevelId, opicLevels.id)
-        )
-        .leftJoin(
-          opicLevels,
-          eq(userProfiles.targetLevelId, opicLevels.id)
-        )
         .where(eq(userProfiles.userId, userId))
         .limit(1);
+
+      if (!profileData || profileData.length === 0) {
+        return NextResponse.json(
+          {
+            error: "사용자 프로필을 찾을 수 없습니다.",
+            code: "PROFILE_NOT_FOUND",
+          },
+          { status: 404 }
+        );
+      }
+
+      const profile = profileData[0];
+
+      const [currentLevel, targetLevel] = await Promise.all([
+        profile.currentLevelId
+          ? db
+              .select()
+              .from(opicLevels)
+              .where(eq(opicLevels.id, profile.currentLevelId))
+              .limit(1)
+          : Promise.resolve([]),
+        profile.targetLevelId
+          ? db
+              .select()
+              .from(opicLevels)
+              .where(eq(opicLevels.id, profile.targetLevelId))
+              .limit(1)
+          : Promise.resolve([]),
+      ]);
+
+      const profileWithLevels = {
+        ...profile,
+        currentLevel: currentLevel[0] ? {
+          id: currentLevel[0].id,
+          levelCode: currentLevel[0].levelCode,
+          levelName: currentLevel[0].levelName,
+          minUtterance: currentLevel[0].minUtterance,
+          minWords: currentLevel[0].minWords,
+        } : null,
+        targetLevel: targetLevel[0] ? {
+          id: targetLevel[0].id,
+          levelCode: targetLevel[0].levelCode,
+          levelName: targetLevel[0].levelName,
+          minUtterance: targetLevel[0].minUtterance,
+          minWords: targetLevel[0].minWords,
+        } : null,
+      };
 
       if (!profileData || profileData.length === 0) {
         return NextResponse.json(
@@ -120,7 +147,7 @@ export async function GET(request: NextRequest) {
         .limit(10);
 
       return NextResponse.json({
-        user: profileData[0],
+        user: profileWithLevels,
         stats: {
           totalAttempts: Number(stats?.totalAttempts || 0),
           masteredQuestions: Number(mastery?.mastered || 0),

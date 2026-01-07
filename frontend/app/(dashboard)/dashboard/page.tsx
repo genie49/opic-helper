@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentFeedbacks, setRecentFeedbacks] = useState<RecentFeedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -52,15 +53,26 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/dashboard", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      let response = await fetch("/api/dashboard");
 
       if (!response.ok) {
-        throw new Error("데이터를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("로그인이 필요합니다.");
+        }
+        if (response.status === 404 && errorData.code === "PROFILE_NOT_FOUND") {
+          response = await fetch("/api/profile", { method: "POST" });
+          if (response.ok) {
+            response = await fetch("/api/dashboard");
+            if (!response.ok) {
+              throw new Error("데이터를 불러오는데 실패했습니다.");
+            }
+          } else {
+            throw new Error("프로필 생성에 실패했습니다.");
+          }
+        } else {
+          throw new Error(errorData.error || "데이터를 불러오는데 실패했습니다.");
+        }
       }
 
       const data = await response.json();
@@ -69,6 +81,7 @@ export default function DashboardPage() {
       setRecentFeedbacks(data.recentFeedbacks);
     } catch (error) {
       console.error("데이터 로드 실패:", error);
+      setError(error instanceof Error ? error.message : "데이터를 불러오는데 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +93,30 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="border-none shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-red-700 mb-2">데이터 로드 오류</h3>
+              <p className="text-slate-600 mb-4 max-w-md">{error}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => window.location.reload()}>다시 시도</Button>
+                {(error.includes("로그인") || error.includes("인증")) && (
+                  <Button onClick={() => window.location.href = "/login"}>로그인하기</Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -330,6 +367,5 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
     </div>
-  );
   );
 }

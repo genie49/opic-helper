@@ -48,15 +48,11 @@ export default function RoleplayPage() {
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("/api/question/next", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const response = await fetch("/api/question/next");
 
       if (!response.ok) {
-        throw new Error("롤플레이 문제를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "롤플레이 문제를 불러오는데 실패했습니다.");
       }
 
       const data = await response.json();
@@ -120,13 +116,11 @@ export default function RoleplayPage() {
       } else {
         setShowFeedback(true);
 
-        const token = localStorage.getItem("access_token");
         const allAnswers = updatedInteractions.map(i => i.answer).join(" ");
 
         const response = await fetch("/api/feedback", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -139,7 +133,8 @@ export default function RoleplayPage() {
         });
 
         if (!response.ok) {
-          throw new Error("피드백 저장에 실패했습니다.");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "피드백 저장에 실패했습니다.");
         }
       }
     } catch (error) {

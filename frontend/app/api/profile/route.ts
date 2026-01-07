@@ -5,6 +5,42 @@ import { eq } from "drizzle-orm";
 import { withAuth } from "@/lib/api-utils/auth";
 import { notFoundError, handleApiError, ApiError } from "@/lib/api-utils/error";
 
+export async function POST(request: NextRequest) {
+  return withAuth(request, async (userId) => {
+    try {
+      const existingProfile = await db
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId))
+        .limit(1);
+
+      if (existingProfile.length > 0) {
+        return NextResponse.json({
+          success: true,
+          profile: existingProfile[0],
+        });
+      }
+
+      const defaultLevelId = 5;
+      const targetLevelId = 8;
+
+      const result = await db.insert(userProfiles).values({
+        userId,
+        displayName: "사용자",
+        currentLevelId: defaultLevelId,
+        targetLevelId: targetLevelId,
+      }).returning();
+
+      return NextResponse.json({
+        success: true,
+        profile: result[0],
+      });
+    } catch (error) {
+      return handleApiError(error);
+    }
+  });
+}
+
 export async function GET(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {

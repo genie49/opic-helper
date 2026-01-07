@@ -1,5 +1,3 @@
-import { pipeline, AutomaticSpeechRecognitionPipeline } from '@xenova/transformers';
-
 export interface WordTimestamp {
   word: string;
   timestamp: [number, number]; // [start, end]
@@ -15,9 +13,10 @@ export interface TranscriptionResult {
 
 class WhisperService {
   private static instance: WhisperService;
-  private pipeline: AutomaticSpeechRecognitionPipeline | null = null;
-  private modelName: string = process.env.NEXT_PUBLIC_WHISPER_MODEL || 'Xenova/whisper-tiny.en';
+  private pipeline: any = null;
+  private modelName: string = 'Xenova/whisper-tiny.en';
   private isLoading: boolean = false;
+  private Transformers: any = null;
 
   private constructor() {}
 
@@ -26,6 +25,19 @@ class WhisperService {
       WhisperService.instance = new WhisperService();
     }
     return WhisperService.instance;
+  }
+
+  async loadTransformers(): Promise<void> {
+    if (this.Transformers) return;
+
+    try {
+      // Dynamic import to avoid build issues
+      const transformersModule = await import('@xenova/transformers');
+      this.Transformers = transformersModule;
+    } catch (error) {
+      console.error('❌ Transformers 모듈 로드 실패:', error);
+      throw new Error('음성 인식 모듈을 로드할 수 없습니다.');
+    }
   }
 
   async initialize(onProgress?: (progress: number) => void): Promise<void> {
@@ -40,6 +52,9 @@ class WhisperService {
     try {
       this.isLoading = true;
 
+      await this.loadTransformers();
+
+      const { pipeline } = this.Transformers;
       this.pipeline = await pipeline(
         'automatic-speech-recognition',
         this.modelName,
@@ -77,11 +92,11 @@ class WhisperService {
       });
 
       const text = (result as any).text || result || '';
-      
+
       // 기본 단어 및 confidence 추출 (실제 구현에서는 더 상세하게 처리)
       const words: WordTimestamp[] = [];
       const lowConfidenceWords: WordTimestamp[] = [];
-      
+
       const avgConfidence = 0.85; // 기본값
 
       return {
