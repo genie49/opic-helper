@@ -12,6 +12,7 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
   const [modelProgress, setModelProgress] = useState(0);
   const [isModelReady, setIsModelReady] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -67,6 +68,12 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
         },
       });
 
+      stream.getTracks().forEach(track => {
+        track.onended = () => {
+          console.log('마이크 트랙이 종료되었습니다.');
+        };
+      });
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000,
@@ -99,17 +106,29 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
+      setPermissionDenied(false);
     } catch (error: any) {
       console.error('녹음 시작 실패:', error);
 
       if (error.name === 'NotAllowedError') {
-        alert('마이크 접근 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.');
+        setPermissionDenied(true);
       } else if (error.name === 'NotFoundError') {
         alert('마이크를 찾을 수 없습니다. 마이크가 연결되어 있는지 확인해주세요.');
       } else if (error.name === 'NotReadableError') {
         alert('마이크에 접근할 수 없습니다. 다른 앱에서 사용 중인지 확인해주세요.');
       } else {
         alert(`녹음 시작 실패: ${error.message || '알 수 없는 오류'}`);
+      }
+    }
+  };
+
+  const requestPermission = async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setPermissionDenied(false);
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        setPermissionDenied(true);
       }
     }
   };
@@ -123,7 +142,30 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
 
   return (
     <div className="w-full flex flex-col items-center gap-8">
-      {!isModelReady && modelProgress > 0 && (
+       {permissionDenied && (
+         <div className="w-full max-w-md p-6 bg-rose-50 border border-rose-100 rounded-2xl animate-in fade-in zoom-in-95 duration-300">
+           <div className="flex items-start gap-4">
+             <div className="p-2 bg-rose-100 rounded-full shrink-0">
+               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-rose-600"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+             </div>
+             <div className="flex-1">
+               <h5 className="font-bold text-rose-900 text-sm mb-2">마이크 접근 권한 필요</h5>
+               <p className="text-xs text-rose-700 mb-4 leading-relaxed">
+                 음성 녹음 기능을 사용하려면 마이크 접근 권한을 허용해야 합니다.
+                 브라우저 설정에서 권한을 허용한 후 아래 버튼을 클릭하세요.
+               </p>
+               <button
+                 onClick={requestPermission}
+                 className="w-full px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-lg transition-colors"
+               >
+                 권한 다시 요청
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {!isModelReady && modelProgress > 0 && (
         <div className="w-full max-w-md p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex justify-between items-end mb-3">
             <div>
