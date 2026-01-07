@@ -1,5 +1,3 @@
-import { pipeline, AutomaticSpeechRecognitionPipeline } from '@xenova/transformers';
-
 export interface WordTimestamp {
   word: string;
   timestamp: [number, number]; // [start, end]
@@ -15,7 +13,7 @@ export interface TranscriptionResult {
 
 class WhisperService {
   private static instance: WhisperService;
-  private pipeline: AutomaticSpeechRecognitionPipeline | null = null;
+  private pipeline: any | null = null;
   private modelName: string = process.env.NEXT_PUBLIC_WHISPER_MODEL || 'Xenova/whisper-tiny.en';
   private isLoading: boolean = false;
 
@@ -39,6 +37,8 @@ class WhisperService {
 
     try {
       this.isLoading = true;
+
+      const { pipeline } = await import('@xenova/transformers');
 
       this.pipeline = await pipeline(
         'automatic-speech-recognition',
