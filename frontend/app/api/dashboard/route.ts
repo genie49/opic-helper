@@ -88,9 +88,13 @@ export async function GET(request: NextRequest) {
           totalAttempts: sql<number>`COUNT(DISTINCT ${feedbacks.id})`.as(
             "total_attempts"
           ),
-          avgScore: sql<number>`AVG((${feedbacks.scores}->>'utterance')::int + (${feedbacks.scores}->>'grammar')::int + (${feedbacks.scores}->>'vocabulary')::int + (${feedbacks.scores}->>'structure')::int + (${feedbacks.scores}->>'pronunciation')::int)`.as(
-            "avg_score"
-          ),
+          avgScore: sql<number>`AVG(
+            CAST(${feedbacks.scores}->>'utterance' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'grammar' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'vocabulary' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'structure' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'pronunciation' AS INTEGER)
+          )`.as("avg_score"),
         })
         .from(feedbacks)
         .where(eq(feedbacks.userId, userId));
@@ -116,9 +120,13 @@ export async function GET(request: NextRequest) {
           questionId: feedbacks.questionId,
           questionText: questions.questionText,
           evaluatedLevel: feedbacks.evaluatedLevel,
-          totalScore: sql<number>`(${feedbacks.scores}->>'utterance')::int + (${feedbacks.scores}->>'grammar')::int + (${feedbacks.scores}->>'vocabulary')::int + (${feedbacks.scores}->>'structure')::int + (${feedbacks.scores}->>'pronunciation')::int)`.as(
-            "total_score"
-          ),
+          totalScore: sql<number>`
+            CAST(${feedbacks.scores}->>'utterance' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'grammar' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'vocabulary' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'structure' AS INTEGER) +
+            CAST(${feedbacks.scores}->>'pronunciation' AS INTEGER)
+          `.as("total_score"),
           createdAt: feedbacks.createdAt,
         })
         .from(feedbacks)
