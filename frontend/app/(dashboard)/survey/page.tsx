@@ -89,6 +89,29 @@ export default function SurveyPage() {
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
+  // 카테고리별 진행률 계산
+  const calculateCategoryProgress = (categoryId: string) => {
+    const selectedInCategory = Array.from(selectedItems).filter(item =>
+      item.startsWith(`${categoryId}-`)
+    );
+    return Math.min((selectedInCategory.length / 1) * 100, 100); // 각 카테고리당 최소 1개
+  };
+
+  // 전체 진행률 = 카테고리별 진행률의 평균
+  const overallProgress = Math.round(
+    surveyCategories.reduce((sum, category) => {
+      return sum + calculateCategoryProgress(category.id);
+    }, 0) / surveyCategories.length
+  );
+
+  // 완성된 카테고리 수 (최소 1개 이상 선택)
+  const completedCategories = surveyCategories.filter(category => {
+    const selectedInCategory = Array.from(selectedItems).filter(item =>
+      item.startsWith(`${categoryId}-`)
+    );
+    return selectedInCategory.length > 0;
+  }).length;
+
   useEffect(() => {
     loadExistingSurvey();
   }, []);
@@ -210,11 +233,11 @@ export default function SurveyPage() {
           <Button variant="ghost" size="lg" onClick={() => router.push("/dashboard")}>
             취소
           </Button>
-          <Button 
-            variant="default" 
-            size="lg" 
-            onClick={handleSave} 
-            disabled={selectedItems.size < 6 || selectedItems.size > 12 || isSaving}
+          <Button
+            variant="default"
+            size="lg"
+            onClick={handleSave}
+            disabled={completedCategories < 5 || isSaving}
             className="shadow-lg shadow-primary/20"
           >
             {isSaving ? (
@@ -233,7 +256,7 @@ export default function SurveyPage() {
           <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden sticky top-24">
             <CardHeader className="bg-slate-900 text-white">
               <CardTitle className="text-lg font-bold">선택 현황</CardTitle>
-              <CardDescription className="text-slate-400">최소 6개에서 최대 12개까지 선택 가능합니다.</CardDescription>
+              <CardDescription className="text-slate-400">각 카테고리당 최소 1개 이상 선택해야 합니다. (총 5개 카테고리)</CardDescription>
             </CardHeader>
             <CardContent className="pt-8">
               <div className="flex flex-col items-center mb-8">
@@ -267,28 +290,30 @@ export default function SurveyPage() {
                 </div>
               </div>
 
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-slate-500 font-medium">진행률</span>
-                   <span className="font-bold text-primary">
-                     {Math.min(Math.round((selectedItems.size / 6) * 100), 100)}%
-                   </span>
-                 </div>
-                 {selectedItems.size < 6 ? (
-                   <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                     <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                       최소 <span className="font-bold">6개</span> 이상의 주제를 선택해야 연습을 시작할 수 있습니다. (현재 {6 - selectedItems.size}개 더 필요)
-                     </p>
-                   </div>
-                 ) : (
-                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                     <p className="text-xs text-emerald-700 leading-relaxed font-medium">
-                       충분한 주제가 선택되었습니다! 이제 실전 연습이 가능합니다.
-                       {selectedItems.size > 6 && ` 추가로 ${selectedItems.size - 6}개의 주제가 선택되었습니다.`}
-                     </p>
-                   </div>
-                 )}
-               </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-medium">카테고리 완성</span>
+                  <span className="font-bold text-primary">{completedCategories} / {surveyCategories.length}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-medium">전체 진행률</span>
+                  <span className="font-bold text-primary">{overallProgress}%</span>
+                </div>
+                {completedCategories < 5 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                    <p className="text-xs text-amber-700 leading-relaxed font-medium">
+                      각 카테고리당 최소 <span className="font-bold">1개</span> 이상의 주제를 선택해야 합니다.
+                      (현재 {5 - completedCategories}개 카테고리 더 필요)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                    <p className="text-xs text-emerald-700 leading-relaxed font-medium">
+                      모든 카테고리에서 충분한 주제가 선택되었습니다! 이제 실전 연습이 가능합니다.
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -299,17 +324,23 @@ export default function SurveyPage() {
             {surveyCategories.map((category) => (
               <Card key={category.id} className="border-none shadow-lg shadow-slate-200/50 overflow-hidden group hover:shadow-xl transition-all">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
-                      {category.id === 'residence' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
-                      {category.id === 'leisure' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>}
-                      {category.id === 'hobby' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>}
-                      {category.id === 'exercise' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-4.3-4.3"/><path d="m3 3 4.3 4.3"/><path d="M18 11a6 6 0 1 0-12 0 6 6 0 0 0 12 0Z"/></svg>}
-                      {category.id === 'travel' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/><path d="M12 2v20"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"/><path d="M12 2a15.3 15.3 0 0 0-4 10 15.3 15.3 0 0 0 4 10"/></svg>}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                        {category.id === 'residence' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
+                        {category.id === 'leisure' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>}
+                        {category.id === 'hobby' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>}
+                        {category.id === 'exercise' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-4.3-4.3"/><path d="m3 3 4.3 4.3"/><path d="M18 11a6 6 0 1 0-12 0 6 6 0 0 0 12 0Z"/></svg>}
+                        {category.id === 'travel' && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z"/><path d="M12 2v20"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"/><path d="M12 2a15.3 15.3 0 0 0-4 10 15.3 15.3 0 0 0 4 10"/></svg>}
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-bold">{category.name}</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">{category.id}</CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base font-bold">{category.name}</CardTitle>
-                      <CardDescription className="text-[10px] font-bold uppercase tracking-widest">{category.id}</CardDescription>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-primary">{calculateCategoryProgress(category.id)}%</div>
+                      <div className="text-[10px] text-slate-400">완성도</div>
                     </div>
                   </div>
                 </CardHeader>
