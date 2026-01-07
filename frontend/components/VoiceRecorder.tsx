@@ -51,11 +51,21 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('이 브라우저는 마이크 접근을 지원하지 않습니다.');
+      }
+
       if (!isModelReady) {
         await initializeModel();
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
+      });
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
@@ -89,9 +99,18 @@ export default function VoiceRecorder({ onTranscriptionComplete }: VoiceRecorder
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('녹음 시작 실패:', error);
-      alert('마이크 접근 권한이 필요합니다.');
+
+      if (error.name === 'NotAllowedError') {
+        alert('마이크 접근 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.');
+      } else if (error.name === 'NotFoundError') {
+        alert('마이크를 찾을 수 없습니다. 마이크가 연결되어 있는지 확인해주세요.');
+      } else if (error.name === 'NotReadableError') {
+        alert('마이크에 접근할 수 없습니다. 다른 앱에서 사용 중인지 확인해주세요.');
+      } else {
+        alert(`녹음 시작 실패: ${error.message || '알 수 없는 오류'}`);
+      }
     }
   };
 
