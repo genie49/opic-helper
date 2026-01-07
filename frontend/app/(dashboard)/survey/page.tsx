@@ -107,7 +107,7 @@ export default function SurveyPage() {
   // 완성된 카테고리 수 (최소 1개 이상 선택)
   const completedCategories = surveyCategories.filter(category => {
     const selectedInCategory = Array.from(selectedItems).filter(item =>
-      item.startsWith(`${categoryId}-`)
+      item.startsWith(`${category.id}-`)
     );
     return selectedInCategory.length > 0;
   }).length;
