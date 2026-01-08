@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { ColorSchemeScript } from "@mantine/core";
+import { MantineProvider } from "@/components/providers/MantineProvider";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -20,10 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body
-        className={`${nunito.variable} antialiased font-sans`}
-      >
-        {children}
+      <head>
+        <ColorSchemeScript />
+      </head>
+      <body className={`${nunito.variable} antialiased font-sans`}>
+        <MantineProvider>{children}</MantineProvider>
       </body>
     </html>
   );
