@@ -1,11 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { Separator } from "@/components/ui/separator";
+import {
+  Card,
+  Text,
+  Title,
+  Group,
+  Stack,
+  Button,
+  SimpleGrid,
+  Box,
+  Paper,
+  Loader,
+  Center,
+  ThemeIcon,
+  TextInput,
+  UnstyledButton,
+  Indicator,
+} from "@mantine/core";
+import {
+  IconUser,
+  IconTarget,
+  IconLogout,
+  IconDeviceFloppy,
+  IconCheck,
+} from "@tabler/icons-react";
 
 interface UserProfile {
   id: string;
@@ -36,18 +56,10 @@ export default function ProfilePage() {
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("access_token");
-      
-      // Load profile and levels in parallel
-      const [profileRes, levelsRes] = await Promise.all([
-        fetch("/api/profile", {
-          headers: { "Authorization": `Bearer ${token}` },
-        }),
-        // Assuming there might be a mastery/levels API or we use a fixed list for now
-        // For simplicity in this mock-heavy stage, let's use fixed levels or fetch if available
-        fetch("/api/mastery", {
-          headers: { "Authorization": `Bearer ${token}` },
-        })
+
+      const [profileRes] = await Promise.all([
+        fetch("/api/profile"),
+        fetch("/api/mastery"),
       ]);
 
       if (profileRes.ok) {
@@ -57,7 +69,6 @@ export default function ProfilePage() {
         setTargetLevelId(data.profile.targetLevelId || "");
       }
 
-      // Mock levels if mastery API doesn't return them directly in the expected format
       const mockLevels = [
         { id: "1", levelCode: "IL", levelName: "Intermediate Low" },
         { id: "2", levelCode: "IM1", levelName: "Intermediate Mid 1" },
@@ -67,7 +78,6 @@ export default function ProfilePage() {
         { id: "6", levelCode: "AL", levelName: "Advanced Low" },
       ];
       setLevels(mockLevels);
-
     } catch (error) {
       console.error("프로필 로드 실패:", error);
     } finally {
@@ -78,11 +88,9 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const token = localStorage.getItem("access_token");
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -92,7 +100,7 @@ export default function ProfilePage() {
       });
 
       if (!response.ok) throw new Error("저장 실패");
-      
+
       alert("프로필이 업데이트되었습니다.");
       router.push("/dashboard");
     } catch (error) {
@@ -105,100 +113,125 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <Center py={80}>
+        <Loader size="lg" />
+      </Center>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-20">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-            <span className="p-2 bg-slate-100 rounded-xl text-slate-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            프로필 설정
-          </h1>
-          <p className="mt-1 text-muted-foreground ml-12">
-            사용자 정보와 학습 목표를 관리하세요.
-          </p>
-        </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving}
-          className="shadow-lg shadow-primary/20 ml-12 md:ml-0"
+    <Stack gap="xl" maw={800} mx="auto" pb={80}>
+      {/* Header */}
+      <Group justify="space-between" align="flex-start" pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+        <Group gap="md">
+          <ThemeIcon size={48} radius="md" variant="light" color="gray">
+            <IconUser size={24} />
+          </ThemeIcon>
+          <Box>
+            <Title order={2} fw={800}>프로필 설정</Title>
+            <Text c="dimmed">사용자 정보와 학습 목표를 관리하세요.</Text>
+          </Box>
+        </Group>
+        <Button
+          size="md"
+          leftSection={<IconDeviceFloppy size={18} />}
+          onClick={handleSave}
+          loading={isSaving}
         >
-          {isSaving ? "저장 중..." : "변경 사항 저장"}
+          변경 사항 저장
         </Button>
-      </div>
+      </Group>
 
-      <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
-        <CardHeader className="bg-slate-50 border-b border-slate-100">
-          <CardTitle className="text-lg font-bold">기본 정보</CardTitle>
-          <CardDescription>서비스에서 표시될 이름을 설정합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-8 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="displayName" className="text-sm font-bold text-slate-600 uppercase tracking-wider">표시 이름</Label>
-            <input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-semibold"
-              placeholder="이름을 입력하세요"
-            />
-          </div>
-        </CardContent>
+      {/* Basic Info Card */}
+      <Card shadow="sm" radius="lg" padding={0} withBorder>
+        <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+          <Title order={4} fw={700}>기본 정보</Title>
+          <Text size="sm" c="dimmed">서비스에서 표시될 이름을 설정합니다.</Text>
+        </Box>
+        <Box p="xl">
+          <TextInput
+            label="표시 이름"
+            placeholder="이름을 입력하세요"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            size="md"
+            styles={{
+              label: { fontWeight: 600, marginBottom: 8, textTransform: "uppercase", fontSize: 12, letterSpacing: 1 },
+            }}
+          />
+        </Box>
       </Card>
 
-      <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
-        <CardHeader className="bg-slate-50 border-b border-slate-100">
-          <CardTitle className="text-lg font-bold">학습 목표 설정</CardTitle>
-          <CardDescription>목표로 하는 OPIc 등급을 선택하세요. AI가 이에 맞춰 피드백을 조정합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-8">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {levels.map((level) => (
-              <div 
-                key={level.id}
-                onClick={() => setTargetLevelId(level.id)}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center gap-2 group ${
-                  targetLevelId === level.id 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className={`text-2xl font-black ${targetLevelId === level.id ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'}`}>
-                  {level.levelCode}
-                </span>
-                <span className={`text-[10px] font-bold uppercase tracking-widest text-center ${targetLevelId === level.id ? 'text-primary/70' : 'text-slate-400'}`}>
-                  {level.levelName}
-                </span>
-                {targetLevelId === level.id && (
-                  <div className="mt-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
+      {/* Target Level Card */}
+      <Card shadow="sm" radius="lg" padding={0} withBorder>
+        <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+          <Group gap="xs">
+            <IconTarget size={20} />
+            <Title order={4} fw={700}>학습 목표 설정</Title>
+          </Group>
+          <Text size="sm" c="dimmed">목표로 하는 OPIc 등급을 선택하세요. AI가 이에 맞춰 피드백을 조정합니다.</Text>
+        </Box>
+        <Box p="xl">
+          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="md">
+            {levels.map((level) => {
+              const isSelected = targetLevelId === level.id;
+              return (
+                <UnstyledButton key={level.id} onClick={() => setTargetLevelId(level.id)}>
+                  <Paper
+                    p="lg"
+                    radius="lg"
+                    withBorder
+                    style={{
+                      borderWidth: 2,
+                      borderColor: isSelected ? "var(--mantine-color-violet-6)" : "var(--mantine-color-gray-2)",
+                      backgroundColor: isSelected ? "var(--mantine-color-violet-0)" : "white",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                    className="hover:border-violet-300"
+                  >
+                    <Stack align="center" gap="xs">
+                      <Text fz={28} fw={900} c={isSelected ? "violet" : "dimmed"}>
+                        {level.levelCode}
+                      </Text>
+                      <Text size="xs" fw={600} c={isSelected ? "violet.7" : "dimmed"} tt="uppercase" ta="center">
+                        {level.levelName}
+                      </Text>
+                      {isSelected && (
+                        <ThemeIcon size="xs" radius="xl" color="violet">
+                          <IconCheck size={10} />
+                        </ThemeIcon>
+                      )}
+                    </Stack>
+                  </Paper>
+                </UnstyledButton>
+              );
+            })}
+          </SimpleGrid>
+        </Box>
       </Card>
 
-      <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
-        <CardHeader className="bg-rose-50 border-b border-rose-100">
-          <CardTitle className="text-lg font-bold text-rose-800">계정 관리</CardTitle>
-          <CardDescription className="text-rose-600/70">로그아웃 및 계정 관련 설정입니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-8">
+      {/* Account Management Card */}
+      <Card shadow="sm" radius="lg" padding={0} withBorder bg="red.0">
+        <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-red-2)" }}>
+          <Title order={4} fw={700} c="red.8">계정 관리</Title>
+          <Text size="sm" c="red.6">로그아웃 및 계정 관련 설정입니다.</Text>
+        </Box>
+        <Box p="xl">
           <form action="/auth/logout" method="post">
-            <Button variant="outline" type="submit" className="w-full h-12 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold">
+            <Button
+              type="submit"
+              variant="outline"
+              color="red"
+              fullWidth
+              size="md"
+              leftSection={<IconLogout size={18} />}
+            >
               로그아웃
             </Button>
           </form>
-        </CardContent>
+        </Box>
       </Card>
-    </div>
+    </Stack>
   );
 }
