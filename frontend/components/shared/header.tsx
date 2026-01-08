@@ -1,14 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ProfileMenu } from "./ProfileMenu";
 import { createClient } from "@/lib/supabase/server";
 
 export async function Header() {
@@ -58,47 +50,7 @@ export async function Header() {
               </div>
 
               <div className="flex items-center space-x-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center space-x-2 focus:outline-none p-1 rounded-full hover:bg-accent transition-colors">
-                      <Avatar className="h-8 w-8 border border-border">
-                        <AvatarImage src={user.user_metadata?.avatar_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {user.user_metadata?.full_name?.[0]?.toUpperCase() ||
-                           user.email?.[0]?.toUpperCase() ||
-                           "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 p-2 shadow-lg border-border/50">
-                    <DropdownMenuLabel className="font-normal px-2 py-3">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-semibold leading-none">
-                          {user.user_metadata?.full_name || "사용자"}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground truncate">
-                          {user.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="my-1" />
-                    <DropdownMenuItem asChild className="rounded-md">
-                      <Link href="/dashboard" className="cursor-pointer">대시보드</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="rounded-md">
-                      <Link href="/profile" className="cursor-pointer">프로필 설정</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="my-1" />
-                    <DropdownMenuItem asChild className="rounded-md text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <form action="/auth/logout" method="post" className="w-full">
-                        <button type="submit" className="w-full text-left cursor-pointer">
-                          로그아웃
-                        </button>
-                      </form>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ProfileMenu user={user} />
               </div>
             </>
           ) : (
