@@ -5,6 +5,8 @@ import VoiceRecorder from "@/components/VoiceRecorder";
 import PronunciationFeedback from "@/components/PronunciationFeedback";
 import EvaluationFeedback from "@/components/EvaluationFeedback";
 import { evaluateAnswer } from "@/lib/services/mockEvaluation";
+import { evaluateWithAI, shouldUseAI, convertMockToEvaluationResult, EvaluationProgress } from "@/lib/services/aiEvaluation";
+import { createClient } from "@/lib/supabase/client";
 import { TranscriptionResult } from "@/lib/whisper/WhisperService";
 import {
   Card,
@@ -60,6 +62,7 @@ export default function PracticePage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
+  const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
 
   useEffect(() => {
     loadDashboardStats();
@@ -103,14 +106,54 @@ export default function PracticePage() {
   const handleTranscriptionComplete = async (result: TranscriptionResult) => {
     setTranscriptionResult(result);
     setShowFeedback(true);
+    setEvaluationProgress(null);
 
     if (!question) return;
 
     try {
       setIsSaving(true);
 
-      const evaluation = evaluateAnswer(result.text, question.questionText);
+      let evaluation;
+
+      if (shouldUseAI()) {
+        // AI 평가 사용
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error("로그인이 필요합니다.");
+        }
+
+        const aiResult = await evaluateWithAI(
+          session.access_token,
+          question.id,
+          question.questionText,
+          result.text,
+          "IM2", // TODO: 사용자 현재 레벨 가져오기
+          "IH",  // TODO: 사용자 목표 레벨 가져오기
+          {
+            onProgress: (progress) => {
+              setEvaluationProgress(progress);
+            },
+          }
+        );
+
+        if (!aiResult) {
+          throw new Error("AI 평가에 실패했습니다.");
+        }
+
+        evaluation = {
+          evaluated_level: aiResult.evaluated_level,
+          scores: aiResult.scores,
+          feedback: aiResult.feedback,
+        };
+      } else {
+        // Mock 평가 사용
+        evaluation = evaluateAnswer(result.text, question.questionText);
+      }
+
       setEvaluationResult(evaluation);
+      setEvaluationProgress(null);
 
       const response = await fetch("/api/feedback", {
         method: "POST",
@@ -136,6 +179,7 @@ export default function PracticePage() {
       alert("평가 결과 저장에 실패했습니다.");
     } finally {
       setIsSaving(false);
+      setEvaluationProgress(null);
     }
   };
 
@@ -438,11 +482,22 @@ export default function PracticePage() {
                 {isSaving && (
                   <Card shadow="md" radius="lg" p={48} withBorder>
                     <Center>
-                      <Stack align="center" gap="md">
+                      <Stack align="center" gap="md" w="100%" maw={400}>
                         <Loader size="lg" color="violet" />
-                        <Box ta="center">
+                        <Box ta="center" w="100%">
                           <Text fw={700}>AI 정밀 평가 중</Text>
-                          <Text size="sm" c="dimmed">답변 내용을 분석하여 등급을 산출하고 있습니다...</Text>
+                          <Text size="sm" c="dimmed" mb="md">
+                            {evaluationProgress?.message || "답변 내용을 분석하여 등급을 산출하고 있습니다..."}
+                          </Text>
+                          {evaluationProgress && (
+                            <Progress
+                              value={evaluationProgress.progress}
+                              size="sm"
+                              radius="xl"
+                              color="violet"
+                              animated
+                            />
+                          )}
                         </Box>
                       </Stack>
                     </Center>

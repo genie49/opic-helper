@@ -6,6 +6,9 @@ import PronunciationFeedback from "@/components/PronunciationFeedback";
 import EvaluationFeedback from "@/components/EvaluationFeedback";
 import { evaluateAnswer } from "@/lib/services/mockEvaluation";
 import { TranscriptionResult } from "@/lib/whisper/WhisperService";
+import { evaluateWithAI, shouldUseAI, EvaluationProgress } from "@/lib/services/aiEvaluation";
+import { roleplayChatSSE, startRoleplay } from "@/lib/api/sseClient";
+import { createClient } from "@/lib/supabase/client";
 import {
   Card,
   Text,
@@ -78,6 +81,7 @@ export default function RoleplayPage() {
   const [isConversationStarted, setIsConversationStarted] = useState(false);
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
+  const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
 
   useEffect(() => {
     loadQuestion();
@@ -137,8 +141,38 @@ export default function RoleplayPage() {
 
     try {
       setIsSaving(true);
+      setEvaluationProgress(null);
 
-      const evaluation = evaluateAnswer(result.text, question.questionText);
+      let evaluation;
+
+      // AI 평가 사용 여부 확인
+      if (shouldUseAI()) {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          const aiResult = await evaluateWithAI(
+            session.access_token,
+            question.id,
+            question.questionText,
+            result.text,
+            "IM2", // 현재 레벨 (추후 사용자 설정에서 가져오기)
+            "IH",  // 목표 레벨
+            {
+              onProgress: (progress) => setEvaluationProgress(progress),
+            }
+          );
+
+          if (aiResult) {
+            evaluation = aiResult;
+          }
+        }
+      }
+
+      // AI 평가 실패시 Mock 평가 사용
+      if (!evaluation) {
+        evaluation = evaluateAnswer(result.text, question.questionText);
+      }
 
       const newInteraction = {
         question: currentQuestion,
@@ -184,6 +218,7 @@ export default function RoleplayPage() {
       alert("평가 결과 저장에 실패했습니다.");
     } finally {
       setIsSaving(false);
+      setEvaluationProgress(null);
     }
   };
 
@@ -628,14 +663,32 @@ export default function RoleplayPage() {
                             onTranscriptionComplete={handleTranscriptionComplete}
                           />
                           {isSaving && (
-                            <Text
-                              size="xs"
-                              fw={600}
-                              c="indigo"
-                              className="animate-pulse"
-                            >
-                              평가 결과를 산출하고 있습니다...
-                            </Text>
+                            <Stack align="center" gap="xs">
+                              {evaluationProgress ? (
+                                <>
+                                  <Progress
+                                    value={evaluationProgress.progress}
+                                    size="sm"
+                                    radius="xl"
+                                    color="indigo"
+                                    w={200}
+                                    animated
+                                  />
+                                  <Text size="xs" fw={600} c="indigo">
+                                    {evaluationProgress.message}
+                                  </Text>
+                                </>
+                              ) : (
+                                <Text
+                                  size="xs"
+                                  fw={600}
+                                  c="indigo"
+                                  className="animate-pulse"
+                                >
+                                  평가 결과를 산출하고 있습니다...
+                                </Text>
+                              )}
+                            </Stack>
                           )}
                         </Stack>
                       </Center>
@@ -673,15 +726,32 @@ export default function RoleplayPage() {
                           </Button>
                         </Group>
                         {isSaving && (
-                          <Text
-                            size="xs"
-                            fw={600}
-                            c="indigo"
-                            ta="center"
-                            className="animate-pulse"
-                          >
-                            평가 결과를 산출하고 있습니다...
-                          </Text>
+                          <Stack align="center" gap="xs">
+                            {evaluationProgress ? (
+                              <>
+                                <Progress
+                                  value={evaluationProgress.progress}
+                                  size="sm"
+                                  radius="xl"
+                                  color="indigo"
+                                  w={200}
+                                  animated
+                                />
+                                <Text size="xs" fw={600} c="indigo">
+                                  {evaluationProgress.message}
+                                </Text>
+                              </>
+                            ) : (
+                              <Text
+                                size="xs"
+                                fw={600}
+                                c="indigo"
+                                className="animate-pulse"
+                              >
+                                평가 결과를 산출하고 있습니다...
+                              </Text>
+                            )}
+                          </Stack>
                         )}
                       </Stack>
                     )}
