@@ -15,7 +15,7 @@
 | 인증 (Supabase) | ✅ 완료 | Google OAuth 로그인/로그아웃/콜백 |
 | Next.js API Routes | ✅ 완료 | `/app/api/` 모든 엔드포인트 구현 완료 |
 | Whisper STT | ✅ 완료 | WebGPU 기반 음성 인식 서비스 구현 완료 |
-| Frontend 기능 연동 | ❌ 미구현 | Mock 데이터만 표시 |
+| Frontend 기능 연동 | ✅ 완료 | API 연동, Mock 평가 작동 |
 | FastAPI Backend | ⏸️ 연기 | 나중에 구현 |
 
 ---
@@ -25,8 +25,8 @@
 **FastAPI 없이 다음 기능을 먼저 완성:**
 1. ✅ Next.js API Routes로 모든 DB CRUD 작업 구현
 2. ✅ Whisper WebGPU로 클라이언트 사이드 STT 구현
-3. ⏳ Practice 페이지 완전한 기능 구현 (Mock 평가로)
-4. ⏳ Dashboard 페이지 실제 데이터 표시
+3. ✅ Practice 페이지 완전한 기능 구현 (Mock 평가로)
+4. ✅ Dashboard 페이지 실제 데이터 표시
 5. ⏳ 백엔드 연동 포인트 준비
 
 ---
@@ -307,13 +307,13 @@ interface MockEvaluation {
 - [ ] 단어별 confidence score 정확하게 추출
 
 ### 단계 3: Frontend 연동
-- [ ] Practice 페이지 완전한 기능 작동
-- [ ] Dashboard 페이지 실제 데이터 표시
-- [ ] Mock 평가 결과 정확하게 표시
+- [x] Practice 페이지 완전한 기능 작동
+- [x] Dashboard 페이지 실제 데이터 표시
+- [x] Mock 평가 결과 정확하게 표시
 
 ### 단계 4: 백엔드 준비
-- [ ] Mock 평가 서비스 작동
-- [ ] SSE 클라이언트 구조 준비
+- [x] Mock 평가 서비스 작동
+- [ ] SSE 클라이언트 구조 준비 (FastAPI 연동 시 구현)
 - [ ] FastAPI 연동 포인트 명확히 정의
 
 ---

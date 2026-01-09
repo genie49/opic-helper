@@ -28,6 +28,8 @@ import {
   Avatar,
   rem,
   Indicator,
+  SegmentedControl,
+  Textarea,
 } from "@mantine/core";
 import {
   IconMessages,
@@ -38,6 +40,8 @@ import {
   IconRobot,
   IconPlayerPlay,
   IconArrowsShuffle,
+  IconMicrophone,
+  IconKeyboard,
 } from "@tabler/icons-react";
 
 interface RoleplayContext {
@@ -72,6 +76,8 @@ export default function RoleplayPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isConversationStarted, setIsConversationStarted] = useState(false);
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
+  const [textInput, setTextInput] = useState("");
 
   useEffect(() => {
     loadQuestion();
@@ -186,12 +192,34 @@ export default function RoleplayPage() {
     setInteractions([]);
     setShowFeedback(false);
     setIsConversationStarted(true);
+    setTextInput("");
     if (question?.questionType === "roleplay" && question.roleplayContext) {
       const context = question.roleplayContext as RoleplayContext;
       setCurrentQuestion(`${context.scenario}\n\n${question.questionText}`);
     } else {
       setCurrentQuestion(question?.questionText || "");
     }
+  };
+
+  const handleTextSubmit = () => {
+    if (!textInput.trim()) return;
+
+    const words = textInput.trim().split(/\s+/);
+    const wordTimestamps = words.map((word, index) => ({
+      word,
+      timestamp: [index * 0.5, (index + 1) * 0.5] as [number, number],
+      confidence: 1.0,
+    }));
+
+    const result: TranscriptionResult = {
+      text: textInput.trim(),
+      words: wordTimestamps,
+      avgConfidence: 1.0,
+      lowConfidenceWords: [],
+    };
+
+    setTextInput("");
+    handleTranscriptionComplete(result);
   };
 
   const handleNextQuestion = () => {
@@ -566,23 +594,98 @@ export default function RoleplayPage() {
                     </Button>
                   </SimpleGrid>
                 ) : (
-                  <Center>
-                    <Stack align="center" gap="md">
-                      <VoiceRecorder
-                        onTranscriptionComplete={handleTranscriptionComplete}
+                  <Stack gap="md">
+                    <Group justify="center">
+                      <SegmentedControl
+                        value={inputMode}
+                        onChange={(value) => setInputMode(value as "voice" | "text")}
+                        data={[
+                          {
+                            value: "voice",
+                            label: (
+                              <Center style={{ gap: 8 }}>
+                                <IconMicrophone size={16} />
+                                <span>음성</span>
+                              </Center>
+                            ),
+                          },
+                          {
+                            value: "text",
+                            label: (
+                              <Center style={{ gap: 8 }}>
+                                <IconKeyboard size={16} />
+                                <span>텍스트</span>
+                              </Center>
+                            ),
+                          },
+                        ]}
                       />
-                      {isSaving && (
-                        <Text
-                          size="xs"
-                          fw={600}
-                          c="indigo"
-                          className="animate-pulse"
-                        >
-                          평가 결과를 산출하고 있습니다...
-                        </Text>
-                      )}
-                    </Stack>
-                  </Center>
+                    </Group>
+                    {inputMode === "voice" ? (
+                      <Center>
+                        <Stack align="center" gap="md">
+                          <VoiceRecorder
+                            onTranscriptionComplete={handleTranscriptionComplete}
+                          />
+                          {isSaving && (
+                            <Text
+                              size="xs"
+                              fw={600}
+                              c="indigo"
+                              className="animate-pulse"
+                            >
+                              평가 결과를 산출하고 있습니다...
+                            </Text>
+                          )}
+                        </Stack>
+                      </Center>
+                    ) : (
+                      <Stack gap="sm">
+                        <Textarea
+                          placeholder="Write your response in English..."
+                          minRows={3}
+                          maxRows={6}
+                          autosize
+                          size="md"
+                          value={textInput}
+                          onChange={(e) => setTextInput(e.currentTarget.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleTextSubmit();
+                            }
+                          }}
+                          styles={{
+                            input: {
+                              fontSize: rem(16),
+                              lineHeight: 1.6,
+                            },
+                          }}
+                        />
+                        <Group justify="flex-end">
+                          <Button
+                            color="indigo"
+                            rightSection={<IconArrowRight size={18} />}
+                            onClick={handleTextSubmit}
+                            disabled={!textInput.trim() || isSaving}
+                          >
+                            전송
+                          </Button>
+                        </Group>
+                        {isSaving && (
+                          <Text
+                            size="xs"
+                            fw={600}
+                            c="indigo"
+                            ta="center"
+                            className="animate-pulse"
+                          >
+                            평가 결과를 산출하고 있습니다...
+                          </Text>
+                        )}
+                      </Stack>
+                    )}
+                  </Stack>
                 )}
               </Box>
             </Card>
