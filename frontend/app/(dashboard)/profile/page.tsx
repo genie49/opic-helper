@@ -17,6 +17,7 @@ import {
   ThemeIcon,
   TextInput,
   UnstyledButton,
+  Badge,
 } from "@mantine/core";
 import {
   IconUser,
@@ -25,16 +26,13 @@ import {
   IconDeviceFloppy,
   IconCheck,
   IconChartBar,
+  IconRobot,
 } from "@tabler/icons-react";
 
 interface UserProfile {
   id: string;
   displayName: string;
-  currentLevel?: {
-    id: string;
-    levelCode: string;
-    levelName: string;
-  };
+  assessedLevel?: string | null; // AI 평가 레벨 (문자열)
   targetLevel?: {
     id: string;
     levelCode: string;
@@ -55,7 +53,6 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const [currentLevelId, setCurrentLevelId] = useState("");
   const [targetLevelId, setTargetLevelId] = useState("");
 
   useEffect(() => {
@@ -75,7 +72,6 @@ export default function ProfilePage() {
         const data = await profileRes.json();
         setProfile(data.profile);
         setDisplayName(data.profile.displayName || "");
-        setCurrentLevelId(data.profile.currentLevel?.id || "");
         setTargetLevelId(data.profile.targetLevel?.id || "");
       }
 
@@ -100,7 +96,6 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           displayName,
-          currentLevelId,
           targetLevelId,
         }),
       });
@@ -168,51 +163,42 @@ export default function ProfilePage() {
         </Box>
       </Card>
 
-      {/* Current Level Card */}
+      {/* AI Assessed Level Card (Read-only) */}
       <Card shadow="sm" radius="lg" padding={0} withBorder>
         <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
           <Group gap="xs">
-            <IconChartBar size={20} />
-            <Title order={4} fw={700}>현재 레벨</Title>
+            <IconRobot size={20} />
+            <Title order={4} fw={700}>AI 평가 레벨</Title>
           </Group>
-          <Text size="sm" c="dimmed">현재 본인의 OPIc 실력 수준을 선택하세요. 맞춤형 학습 콘텐츠를 제공합니다.</Text>
+          <Text size="sm" c="dimmed">AI가 평가한 현재 실력 수준입니다. 학습을 진행하면 자동으로 업데이트됩니다.</Text>
         </Box>
         <Box p="xl">
-          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="md">
-            {levels.map((level) => {
-              const isSelected = currentLevelId === level.id;
-              return (
-                <UnstyledButton key={level.id} onClick={() => setCurrentLevelId(level.id)}>
-                  <Paper
-                    p="lg"
-                    radius="lg"
-                    withBorder
-                    style={{
-                      borderWidth: 2,
-                      borderColor: isSelected ? "var(--mantine-color-blue-6)" : "var(--mantine-color-gray-2)",
-                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : "white",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Stack align="center" gap="xs">
-                      <Text fz={28} fw={900} c={isSelected ? "blue" : "dimmed"}>
-                        {level.levelCode}
-                      </Text>
-                      <Text size="xs" fw={600} c={isSelected ? "blue.7" : "dimmed"} tt="uppercase" ta="center">
-                        {level.levelName}
-                      </Text>
-                      {isSelected && (
-                        <ThemeIcon size="xs" radius="xl" color="blue">
-                          <IconCheck size={10} />
-                        </ThemeIcon>
-                      )}
-                    </Stack>
-                  </Paper>
-                </UnstyledButton>
-              );
-            })}
-          </SimpleGrid>
+          <Paper p="xl" radius="lg" withBorder bg="gray.0">
+            <Stack align="center" gap="md">
+              {profile?.assessedLevel ? (
+                <>
+                  <Text fz={48} fw={900} c="blue">
+                    {profile.assessedLevel}
+                  </Text>
+                  <Badge size="lg" color="blue" variant="light">
+                    AI 평가 완료
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <Text fz={48} fw={900} c="dimmed">
+                    -
+                  </Text>
+                  <Badge size="lg" color="gray" variant="light">
+                    아직 평가 전
+                  </Badge>
+                  <Text size="sm" c="dimmed" ta="center">
+                    학습을 시작하면 AI가 자동으로 레벨을 평가합니다.
+                  </Text>
+                </>
+              )}
+            </Stack>
+          </Paper>
         </Box>
       </Card>
 

@@ -7,12 +7,11 @@ import {
   userQuestionMastery,
   questions,
 } from "@/lib/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { withAuth } from "@/lib/api-utils/auth";
 import { handleApiError } from "@/lib/api-utils/error";
 
-const currentLevelTable = alias(opicLevels, "current_level");
 const targetLevelTable = alias(opicLevels, "target_level");
 
 export async function GET(request: NextRequest) {
@@ -23,13 +22,7 @@ export async function GET(request: NextRequest) {
           id: userProfiles.id,
           userId: userProfiles.userId,
           displayName: userProfiles.displayName,
-          currentLevel: {
-            id: currentLevelTable.id,
-            levelCode: currentLevelTable.levelCode,
-            levelName: currentLevelTable.levelName,
-            minUtterance: currentLevelTable.minUtterance,
-            minWords: currentLevelTable.minWords,
-          },
+          assessedLevel: userProfiles.assessedLevel, // AI 평가 레벨 (문자열)
           targetLevel: {
             id: targetLevelTable.id,
             levelCode: targetLevelTable.levelCode,
@@ -39,10 +32,6 @@ export async function GET(request: NextRequest) {
           },
         })
         .from(userProfiles)
-        .leftJoin(
-          currentLevelTable,
-          eq(userProfiles.currentLevelId, currentLevelTable.id)
-        )
         .leftJoin(
           targetLevelTable,
           eq(userProfiles.targetLevelId, targetLevelTable.id)
@@ -110,17 +99,15 @@ export async function GET(request: NextRequest) {
       const stats = statsQuery[0];
       const mastery = masteryQuery[0];
 
+      // 레벨 히스토리는 feedbacks의 evaluatedLevel에서 추출
       const levelHistoryQuery = await db
         .select({
-          level: opicLevels.levelCode,
-          achievedAt: userProfiles.updatedAt,
+          level: feedbacks.evaluatedLevel,
+          achievedAt: feedbacks.createdAt,
         })
-        .from(userProfiles)
-        .leftJoin(
-          opicLevels,
-          eq(userProfiles.currentLevelId, opicLevels.id)
-        )
-        .where(eq(userProfiles.userId, userId))
+        .from(feedbacks)
+        .where(eq(feedbacks.userId, userId))
+        .orderBy(feedbacks.createdAt)
         .limit(10);
 
       return NextResponse.json({

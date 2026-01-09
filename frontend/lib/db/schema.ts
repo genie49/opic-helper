@@ -34,7 +34,7 @@ export const userProfiles = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").notNull(), // FK to auth.users
-    currentLevelId: integer("current_level_id").references(() => opicLevels.id),
+    assessedLevel: varchar("assessed_level", { length: 10 }), // AI 평가 레벨 (e.g., "IM2")
     targetLevelId: integer("target_level_id").references(() => opicLevels.id),
     displayName: varchar("display_name", { length: 100 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -174,11 +174,6 @@ export const questionWeights = pgTable(
 
 // Relations
 export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
-  currentLevel: one(opicLevels, {
-    fields: [userProfiles.currentLevelId],
-    references: [opicLevels.id],
-    relationName: "currentLevel",
-  }),
   targetLevel: one(opicLevels, {
     fields: [userProfiles.targetLevelId],
     references: [opicLevels.id],

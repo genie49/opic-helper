@@ -50,11 +50,7 @@ interface UserProfile {
   id: string;
   userId: string;
   displayName: string;
-  currentLevel: {
-    id: string;
-    levelCode: string;
-    levelName: string;
-  };
+  assessedLevel?: string | null; // AI 평가 레벨
   targetLevel: {
     id: string;
     levelCode: string;
@@ -149,7 +145,7 @@ export default function DashboardPage() {
 
       {/* Level & Stats Grid */}
       <SimpleGrid cols={{ base: 1, lg: 3 }} spacing="lg">
-        {/* Current Level Card */}
+        {/* AI Assessed Level Card */}
         {user && (
           <Card
             shadow="xl"
@@ -161,9 +157,9 @@ export default function DashboardPage() {
             }}
           >
             <Stack align="center" gap="md">
-              <Text size="sm" fw={500} style={{ opacity: 0.8 }}>현재 실력</Text>
+              <Text size="sm" fw={500} style={{ opacity: 0.8 }}>AI 평가 레벨</Text>
               <Title order={1} fz={72} fw={900} lh={1}>
-                {user.currentLevel?.levelCode || "-"}
+                {user.assessedLevel || "-"}
               </Title>
               <Badge
                 size="lg"
@@ -171,7 +167,7 @@ export default function DashboardPage() {
                 color="white"
                 style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
               >
-                {user.currentLevel?.levelName || "미설정"}
+                {user.assessedLevel ? "AI 평가 완료" : "아직 평가 전"}
               </Badge>
               <Text size="sm" style={{ opacity: 0.7 }}>
                 목표: <Text span fw={700}>{user.targetLevel?.levelCode || "-"}</Text> ({user.targetLevel?.levelName || "미설정"})

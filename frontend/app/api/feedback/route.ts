@@ -92,37 +92,14 @@ export async function POST(request: NextRequest) {
           });
       }
 
-      const profileData = await db
-        .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, userId))
-        .limit(1);
-
-      if (profileData.length > 0) {
-        const currentProfile = profileData[0];
-        const recentFeedbacks = await db
-          .select({ level: feedbacks.evaluatedLevel })
-          .from(feedbacks)
-          .where(eq(feedbacks.userId, userId))
-          .orderBy(feedbacks.createdAt)
-          .limit(3);
-
-        const recentLevels = recentFeedbacks.map((f) => f.level);
-        const allSameLevel = recentLevels.every(
-          (l) => l === evaluatedLevel
-        );
-        const currentLevelId = currentProfile.currentLevelId;
-
-        if (allSameLevel && recentLevels.length >= 3 && currentLevelId) {
-          await db
-            .update(userProfiles)
-            .set({
-              currentLevelId: currentLevelId + 1,
-              updatedAt: new Date(),
-            })
-            .where(eq(userProfiles.userId, userId));
-        }
-      }
+      // AI 평가 레벨을 바로 프로필에 업데이트
+      await db
+        .update(userProfiles)
+        .set({
+          assessedLevel: evaluatedLevel,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, userId));
 
       return NextResponse.json({
         success: true,

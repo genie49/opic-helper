@@ -80,7 +80,7 @@ interface ChatMessage {
 }
 
 interface UserLevel {
-  currentLevelCode: string;
+  assessedLevel: string;
   targetLevelCode: string;
 }
 
@@ -103,7 +103,7 @@ export default function RoleplayPage() {
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
-  const [userLevel, setUserLevel] = useState<UserLevel>({ currentLevelCode: "IM2", targetLevelCode: "IH" });
+  const [userLevel, setUserLevel] = useState<UserLevel>({ assessedLevel: "IM2", targetLevelCode: "IH" });
 
   // AI 롤플레이 상태
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -122,7 +122,7 @@ export default function RoleplayPage() {
       if (response.ok) {
         const data = await response.json();
         setUserLevel({
-          currentLevelCode: data.profile.currentLevel?.levelCode || "IM2",
+          assessedLevel: data.profile.assessedLevel || "IM2",
           targetLevelCode: data.profile.targetLevel?.levelCode || "IH",
         });
       }
@@ -134,10 +134,12 @@ export default function RoleplayPage() {
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
     try {
-      const response = await fetch("/api/question");
+      const response = await fetch("/api/question?type=roleplay");
 
       if (!response.ok) {
-        throw new Error("롤플레이 문제를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "롤플레이 문제를 불러오는데 실패했습니다.";
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -159,7 +161,7 @@ export default function RoleplayPage() {
       }
     } catch (error) {
       console.error("문제 로드 실패:", error);
-      alert("롤플레이 문제를 불러오는데 실패했습니다.");
+      alert(error instanceof Error ? error.message : "롤플레이 문제를 불러오는데 실패했습니다.");
     } finally {
       setIsLoadingQuestion(false);
     }
@@ -386,7 +388,7 @@ export default function RoleplayPage() {
           question.id,
           question.questionText,
           allAnswers,
-          userLevel.currentLevelCode,
+          userLevel.assessedLevel,
           userLevel.targetLevelCode,
           { onProgress: (progress) => setEvaluationProgress(progress) }
         );

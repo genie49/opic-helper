@@ -38,15 +38,13 @@ export async function GET(request: NextRequest) {
 
        // Create user profile if it doesn't exist
        if (existingProfile.length === 0) {
-         // Get default level ID (IM2 = 5 based on schema)
-         const defaultLevelId = 5; // IM2
-         const targetLevelId = 8;   // IH
+         const targetLevelId = 8; // IH (기본 목표 레벨)
 
          await db.insert(userProfiles).values({
            userId: user.id,
            displayName: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-           currentLevelId: defaultLevelId, // Default starting level
-           targetLevelId: targetLevelId,   // Default target level
+           assessedLevel: null, // AI 평가 전까지 null
+           targetLevelId: targetLevelId,
          });
 
          console.log("Created new user profile for:", user.email);

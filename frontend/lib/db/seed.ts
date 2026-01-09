@@ -82,12 +82,12 @@ async function seed() {
         minModifiers: 5,
         description: "능숙한 표현 구사",
       },
-    ]);
+    ]).onConflictDoNothing();
     console.log("✅ OPIc levels seeded");
 
     // 2. Seed Question Topics
     console.log("Seeding question topics...");
-    const topics = await db.insert(questionTopics).values([
+    await db.insert(questionTopics).values([
       // 거주
       { topicName: "집", category: "residence", isCommonTopic: false },
       { topicName: "동네", category: "residence", isCommonTopic: false },
@@ -112,7 +112,10 @@ async function seed() {
       { topicName: "날씨", category: "common", isCommonTopic: true },
       { topicName: "가구", category: "common", isCommonTopic: true },
       { topicName: "패션", category: "common", isCommonTopic: true },
-    ]).returning();
+    ]).onConflictDoNothing();
+
+    // 토픽 조회 (insert 후 반환값이 없을 수 있으므로 별도 조회)
+    const topics = await db.select().from(questionTopics);
     console.log("✅ Question topics seeded");
 
     // 3. Seed Sample Questions
@@ -173,7 +176,7 @@ async function seed() {
           createdBy: "admin",
           isAiGenerated: false,
         },
-      ]);
+      ]).onConflictDoNothing();
       console.log("✅ Sample questions seeded");
     }
 

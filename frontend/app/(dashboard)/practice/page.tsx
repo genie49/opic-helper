@@ -42,7 +42,18 @@ import {
   IconClock,
   IconTarget,
   IconKeyboard,
+  IconFilter,
+  IconRobot,
 } from "@tabler/icons-react";
+
+// 문제 유형 정의
+const QUESTION_TYPES = [
+  { value: "", label: "전체", color: "gray" },
+  { value: "description", label: "묘사", color: "blue" },
+  { value: "routine", label: "루틴", color: "green" },
+  { value: "experience", label: "경험", color: "orange" },
+  { value: "roleplay", label: "롤플레이", color: "violet" },
+] as const;
 
 interface DashboardStats {
   totalAttempts: number;
@@ -53,7 +64,7 @@ interface DashboardStats {
 }
 
 interface UserLevel {
-  currentLevelCode: string;
+  assessedLevel: string;
   targetLevelCode: string;
 }
 
@@ -68,7 +79,8 @@ export default function PracticePage() {
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
-  const [userLevel, setUserLevel] = useState<UserLevel>({ currentLevelCode: "IM2", targetLevelCode: "IH" });
+  const [userLevel, setUserLevel] = useState<UserLevel>({ assessedLevel: "", targetLevelCode: "IH" });
+  const [questionTypeFilter, setQuestionTypeFilter] = useState<string>("");
 
   useEffect(() => {
     loadUserProfile();
@@ -82,7 +94,7 @@ export default function PracticePage() {
       if (response.ok) {
         const data = await response.json();
         setUserLevel({
-          currentLevelCode: data.profile.currentLevel?.levelCode || "IM2",
+          assessedLevel: data.profile.assessedLevel || "IM2",
           targetLevelCode: data.profile.targetLevel?.levelCode || "IH",
         });
       }
@@ -106,23 +118,32 @@ export default function PracticePage() {
     }
   };
 
-  const loadQuestion = async () => {
+  const loadQuestion = async (typeFilter?: string) => {
     setIsLoadingQuestion(true);
     try {
-      const response = await fetch("/api/question");
+      const filterType = typeFilter !== undefined ? typeFilter : questionTypeFilter;
+      const url = filterType ? `/api/question?type=${filterType}` : "/api/question";
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error("문제를 불러오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "문제를 불러오는데 실패했습니다.";
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       setQuestion(data.question);
     } catch (error) {
       console.error("문제 로드 실패:", error);
-      alert("문제를 불러오는데 실패했습니다.");
+      alert(error instanceof Error ? error.message : "문제를 불러오는데 실패했습니다.");
     } finally {
       setIsLoadingQuestion(false);
     }
+  };
+
+  const handleFilterChange = (newFilter: string) => {
+    setQuestionTypeFilter(newFilter);
+    loadQuestion(newFilter);
   };
 
   const handleTranscriptionComplete = async (result: TranscriptionResult) => {
@@ -151,7 +172,7 @@ export default function PracticePage() {
           question.id,
           question.questionText,
           result.text,
-          userLevel.currentLevelCode,
+          userLevel.assessedLevel,
           userLevel.targetLevelCode,
           {
             onProgress: (progress) => {
@@ -195,7 +216,8 @@ export default function PracticePage() {
         throw new Error("피드백 저장에 실패했습니다.");
       }
 
-      await loadDashboardStats();
+      // 레벨과 통계 업데이트
+      await Promise.all([loadDashboardStats(), loadUserProfile()]);
     } catch (error) {
       console.error("평가 및 저장 실패:", error);
       alert("평가 결과 저장에 실패했습니다.");
@@ -252,35 +274,70 @@ export default function PracticePage() {
   return (
     <Stack gap="xl" pb={80}>
       {/* Header */}
-      <Group justify="space-between" align="flex-start" pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-        <Group gap="md">
-          <ThemeIcon size={48} radius="md" variant="light">
-            <IconMicrophone size={24} />
-          </ThemeIcon>
-          <Box>
-            <Title order={2} fw={800}>실전 연습</Title>
-            <Text c="dimmed">AI가 추천하는 맞춤형 문제로 실전 감각을 익히세요.</Text>
-          </Box>
+      <Box pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+        <Group justify="space-between" align="flex-start" mb="lg">
+          <Group gap="md">
+            <ThemeIcon size={48} radius="md" variant="light">
+              <IconMicrophone size={24} />
+            </ThemeIcon>
+            <Box>
+              <Title order={2} fw={800}>무한 연습</Title>
+              <Text c="dimmed">AI가 추천하는 맞춤형 문제로 실전 감각을 익히세요.</Text>
+            </Box>
+          </Group>
+          <Group gap="sm">
+            {/* 실시간 레벨 표시 */}
+            <Paper px="md" py="xs" radius="md" withBorder bg="violet.0">
+              <Group gap="xs">
+                <IconRobot size={18} color="var(--mantine-color-violet-6)" />
+                <Box>
+                  <Text size="xs" c="dimmed" fw={600}>AI 평가 레벨</Text>
+                  <Text size="lg" fw={900} c="violet" lh={1}>
+                    {userLevel.assessedLevel || "-"}
+                  </Text>
+                </Box>
+                <Text size="xs" c="dimmed" ml="xs">
+                  → {userLevel.targetLevelCode}
+                </Text>
+              </Group>
+            </Paper>
+            <Button
+              variant="outline"
+              size="md"
+              leftSection={<IconPlayerSkipForward size={18} />}
+              onClick={handleSkipQuestion}
+            >
+              건너뛰기
+            </Button>
+            <Button
+              size="md"
+              rightSection={<IconArrowRight size={18} />}
+              onClick={handleNextQuestion}
+              disabled={!showFeedback}
+            >
+              다음 문제
+            </Button>
+          </Group>
         </Group>
-        <Group gap="sm">
-          <Button
-            variant="outline"
-            size="md"
-            leftSection={<IconPlayerSkipForward size={18} />}
-            onClick={handleSkipQuestion}
-          >
-            건너뛰기
-          </Button>
-          <Button
-            size="md"
-            rightSection={<IconArrowRight size={18} />}
-            onClick={handleNextQuestion}
-            disabled={!showFeedback}
-          >
-            다음 문제
-          </Button>
+
+        {/* 문제 유형 필터 */}
+        <Group gap="xs">
+          <IconFilter size={16} color="var(--mantine-color-dimmed)" />
+          <Text size="sm" fw={600} c="dimmed">문제 유형:</Text>
+          {QUESTION_TYPES.map((type) => (
+            <Button
+              key={type.value}
+              variant={questionTypeFilter === type.value ? "filled" : "light"}
+              color={type.color}
+              size="xs"
+              radius="xl"
+              onClick={() => handleFilterChange(type.value)}
+            >
+              {type.label}
+            </Button>
+          ))}
         </Group>
-      </Group>
+      </Box>
 
       <Grid gutter="xl">
         {/* Left Sidebar */}
@@ -301,27 +358,19 @@ export default function PracticePage() {
                     <SimpleGrid cols={2}>
                       <Box>
                         <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>문제 유형</Text>
-                        <Text fw={600}>{question?.questionType || "-"}</Text>
+                        <Badge
+                          size="lg"
+                          variant="light"
+                          color={QUESTION_TYPES.find(t => t.value === question?.questionType)?.color || "gray"}
+                        >
+                          {QUESTION_TYPES.find(t => t.value === question?.questionType)?.label || question?.questionType || "-"}
+                        </Badge>
                       </Box>
                       <Box ta="right">
                         <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>목표 시간</Text>
                         <Text fw={600}>90초</Text>
                       </Box>
                     </SimpleGrid>
-                    <Box pt="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
-                      <Group justify="space-between" mb="xs">
-                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">난이도</Text>
-                        <Badge size="sm" variant="light">
-                          Level {question?.difficultyLevel || "-"}
-                        </Badge>
-                      </Group>
-                      <Progress
-                        value={(parseInt(question?.difficultyLevel || "0") / 5) * 100}
-                        size="sm"
-                        radius="xl"
-                        color="violet"
-                      />
-                    </Box>
                   </Stack>
                 ) : (
                   <Stack gap="md">

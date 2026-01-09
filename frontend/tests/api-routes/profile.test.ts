@@ -28,13 +28,7 @@ describe('Profile API', () => {
         id: 'profile-1',
         userId: mockUserId,
         displayName: 'Test User',
-        currentLevel: {
-          id: 5,
-          levelCode: 'IM2',
-          levelName: 'Intermediate Mid 2',
-          minUtterance: 8,
-          minWords: 110,
-        },
+        assessedLevel: 'IM2', // AI 평가 레벨
         targetLevel: {
           id: 8,
           levelCode: 'IH',
@@ -60,7 +54,7 @@ describe('Profile API', () => {
       expect(response.status).toBe(200);
       expect(data.profile).toBeDefined();
       expect(data.profile.displayName).toBe('Test User');
-      expect(data.profile.currentLevel.levelCode).toBe('IM2');
+      expect(data.profile.assessedLevel).toBe('IM2');
       expect(data.profile.targetLevel.levelCode).toBe('IH');
     });
 

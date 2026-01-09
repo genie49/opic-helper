@@ -3,10 +3,8 @@ import { db } from "@/lib/db";
 import {
   questions,
   questionTopics,
-  userProfiles,
   surveySelections,
   userQuestionMastery,
-  opicLevels,
 } from "@/lib/db/schema";
 import { eq, inArray, and, sql } from "drizzle-orm";
 import { withAuth } from "@/lib/api-utils/auth";
@@ -15,25 +13,11 @@ import { handleApiError, notFoundError } from "@/lib/api-utils/error";
 export async function GET(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {
-      const profile = await db
-        .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, userId))
-        .limit(1);
+      // 쿼리 파라미터에서 questionType 필터 가져오기
+      const { searchParams } = new URL(request.url);
+      const questionTypeFilter = searchParams.get("type"); // e.g., "roleplay"
 
-      if (!profile || profile.length === 0) {
-        return NextResponse.json(
-          {
-            error: "사용자 프로필을 찾을 수 없습니다.",
-            code: "PROFILE_NOT_FOUND",
-          },
-          { status: 404 }
-        );
-      }
-
-      const userProfile = profile[0];
-      const currentLevelId = userProfile.currentLevelId;
-
+      // 사용자의 서베이 선택 토픽 조회
       const topics = await db
         .select({ selection: surveySelections.selection })
         .from(surveySelections)
@@ -51,14 +35,6 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const levelInfo = await db
-        .select()
-        .from(opicLevels)
-        .where(eq(opicLevels.id, currentLevelId!))
-        .limit(1);
-
-      const difficultyLevel = levelInfo[0]?.levelCode || "IM2";
-
       const subquery = db
         .select({
           questionId: userQuestionMastery.questionId,
@@ -67,6 +43,14 @@ export async function GET(request: NextRequest) {
         .from(userQuestionMastery)
         .where(eq(userQuestionMastery.userId, userId))
         .as("mastery");
+
+      // WHERE 조건 구성 - 난이도 필터 제거 (OPIc은 난이도별로 문제가 다르지 않음)
+      const whereConditions = [inArray(questionTopics.topicName, topicNames)];
+
+      // questionType 필터가 있으면 조건 추가
+      if (questionTypeFilter) {
+        whereConditions.push(eq(questions.questionType, questionTypeFilter));
+      }
 
       const availableQuestions = await db
         .select({
@@ -78,6 +62,7 @@ export async function GET(request: NextRequest) {
           questionText: questions.questionText,
           expectedAnswerStructure: questions.expectedAnswerStructure,
           keyVocabulary: questions.keyVocabulary,
+          roleplayContext: questions.roleplayContext,
           masteryLevel: sql<number>`COALESCE(${subquery.masteryLevel}, 0)`.as(
             "mastery_level"
           ),
@@ -88,12 +73,7 @@ export async function GET(request: NextRequest) {
           eq(questions.topicId, questionTopics.id)
         )
         .leftJoin(subquery, eq(questions.id, subquery.questionId))
-        .where(
-          and(
-            eq(questions.difficultyLevel, difficultyLevel),
-            inArray(questionTopics.topicName, topicNames)
-          )
-        )
+        .where(and(...whereConditions))
         .orderBy(sql`COALESCE(${subquery.masteryLevel}, 0) ASC`)
         .limit(20);
 
@@ -139,6 +119,7 @@ export async function GET(request: NextRequest) {
           questionText: selectedQuestion.questionText,
           expectedAnswerStructure: selectedQuestion.expectedAnswerStructure,
           keyVocabulary: selectedQuestion.keyVocabulary,
+          roleplayContext: selectedQuestion.roleplayContext,
         },
         metadata: {
           masteryLevel: currentMastery[0]?.masteryLevel || 0,

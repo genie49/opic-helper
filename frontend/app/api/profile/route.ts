@@ -4,25 +4,18 @@ import { userProfiles, opicLevels } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { withAuth } from "@/lib/api-utils/auth";
-import { notFoundError, handleApiError, ApiError } from "@/lib/api-utils/error";
+import { notFoundError, handleApiError } from "@/lib/api-utils/error";
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {
-      const currentLevel = alias(opicLevels, "currentLevel");
       const targetLevel = alias(opicLevels, "targetLevel");
 
       const profile = await db
         .select({
           id: userProfiles.id,
           userId: userProfiles.userId,
-          currentLevel: {
-            id: currentLevel.id,
-            levelCode: currentLevel.levelCode,
-            levelName: currentLevel.levelName,
-            minUtterance: currentLevel.minUtterance,
-            minWords: currentLevel.minWords,
-          },
+          assessedLevel: userProfiles.assessedLevel, // AI 평가 레벨 (문자열)
           targetLevel: {
             id: targetLevel.id,
             levelCode: targetLevel.levelCode,
@@ -35,10 +28,6 @@ export async function GET(request: NextRequest) {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .leftJoin(
-          currentLevel,
-          eq(userProfiles.currentLevelId, currentLevel.id)
-        )
         .leftJoin(
           targetLevel,
           eq(userProfiles.targetLevelId, targetLevel.id)
@@ -67,14 +56,14 @@ export async function PATCH(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {
       const body = await request.json();
-      const { targetLevelId, currentLevelId, displayName } = body;
+      const { targetLevelId, assessedLevel, displayName } = body;
 
       const updates: Record<string, any> = {};
       if (targetLevelId !== undefined) {
         updates.targetLevelId = targetLevelId;
       }
-      if (currentLevelId !== undefined) {
-        updates.currentLevelId = currentLevelId;
+      if (assessedLevel !== undefined) {
+        updates.assessedLevel = assessedLevel;
       }
       if (displayName !== undefined) {
         updates.displayName = displayName;
