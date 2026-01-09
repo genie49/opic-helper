@@ -3,7 +3,7 @@ OPIc 답변 평가 Agent.
 LangChain v1 기반으로 구현.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from langchain_xai import ChatXAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
@@ -13,6 +13,7 @@ from app.core.config import settings
 
 class EvaluationScores(BaseModel):
     """5가지 평가 기준 점수"""
+
     utterance: int = Field(description="발화량 점수 (0~10)", ge=0, le=10)
     grammar: int = Field(description="문법 정확도 (0~10)", ge=0, le=10)
     vocabulary: int = Field(description="어휘 다양성 (0~10)", ge=0, le=10)
@@ -22,17 +23,31 @@ class EvaluationScores(BaseModel):
 
 class Feedback(BaseModel):
     """상세 피드백"""
+
     strengths: list[str] = Field(description="잘한 점 목록 (한국어)")
     weaknesses: list[str] = Field(description="부족한 점 목록 (한국어)")
     improvements: list[str] = Field(description="구체적인 개선 방법 (한국어)")
     model_answer: str = Field(description="모범 답안 예시 (영어)")
 
 
+class QuantitativeMetrics(BaseModel):
+    """정량적 지표"""
+
+    word_count: int = Field(description="총 단어 수")
+    ttr: float = Field(description="Type-Token Ratio (고유 단어 비율 0~1)", ge=0, le=1)
+    sentence_count: int = Field(description="문장 수")
+    connector_count: int = Field(description="접속사 수")
+
+
 class EvaluationResult(BaseModel):
     """평가 결과"""
-    evaluated_level: str = Field(description="평가된 수준 (NL, IL, IM1, IM2, IM3, IH, AL)")
+
+    evaluated_level: str = Field(
+        description="평가된 수준 (NL, IL, IM1, IM2, IM3, IH, AL)"
+    )
     scores: EvaluationScores
     feedback: Feedback
+    quantitative_metrics: QuantitativeMetrics = Field(description="정량적 지표")
     overall_comment: str = Field(description="종합 의견 (한국어)")
 
 
@@ -69,6 +84,22 @@ EVALUATION_SYSTEM_PROMPT = """당신은 OPIc 평가 전문가입니다.
 ### 5. 발음 정확도 (Pronunciation)
 - 텍스트 기반 추정 (반복, 불명확한 표현 등)
 
+## 정량적 지표 계산
+답변 텍스트에서 다음 지표를 정확히 계산하세요:
+
+1. **총 단어 수 (word_count)**
+   - 공백으로 구분된 모든 단어 수
+
+2. **Type-Token Ratio (ttr)**
+   - 고유 단어 수 / 총 단어 수
+   - 예: "I like cats. I like dogs." → 4단어 중 3개 고유 → ttr = 0.75
+
+3. **문장 수 (sentence_count)**
+   - 마침표(.), 물음표(?), 느낌표(!)로 끝나는 문장 수
+
+4. **접속사 수 (connector_count)**
+   - and, but, so, however, therefore, because, although 등 접속사/접속구 수
+
 ## 수준 판정 기준
 총점 기준:
 - 0~15: NL~IL
@@ -92,7 +123,7 @@ def create_evaluation_agent():
     # Grok LLM (xAI)
     llm = ChatXAI(
         model=settings.XAI_MODEL,
-        api_key=settings.XAI_API_KEY,
+        api_key=SecretStr(settings.XAI_API_KEY),
         temperature=0.3,  # 일관된 평가를 위해 낮은 temperature
     )
 
@@ -100,9 +131,12 @@ def create_evaluation_agent():
     parser = PydanticOutputParser(pydantic_object=EvaluationResult)
 
     # Prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", EVALUATION_SYSTEM_PROMPT),
-        ("human", """
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", EVALUATION_SYSTEM_PROMPT),
+            (
+                "human",
+                """
 질문: {question}
 
 사용자 답변: {answer}
@@ -111,20 +145,23 @@ def create_evaluation_agent():
 목표 수준: {target_level}
 
 위 답변을 평가하고 JSON 형식으로 결과를 반환하세요.
-""")
-    ])
+""",
+            ),
+        ]
+    )
 
     # Chain 구성
-    chain = prompt.partial(format_instructions=parser.get_format_instructions()) | llm | parser
+    chain = (
+        prompt.partial(format_instructions=parser.get_format_instructions())
+        | llm
+        | parser
+    )
 
     return chain
 
 
 async def evaluate_answer(
-    question: str,
-    answer: str,
-    current_level: str = "IM2",
-    target_level: str = "IH"
+    question: str, answer: str, current_level: str = "IM2", target_level: str = "IH"
 ) -> EvaluationResult:
     """
     답변 평가 실행
@@ -140,11 +177,13 @@ async def evaluate_answer(
     """
     chain = create_evaluation_agent()
 
-    result = await chain.ainvoke({
-        "question": question,
-        "answer": answer,
-        "current_level": current_level,
-        "target_level": target_level,
-    })
+    result = await chain.ainvoke(
+        {
+            "question": question,
+            "answer": answer,
+            "current_level": current_level,
+            "target_level": target_level,
+        }
+    )
 
     return result

@@ -35,6 +35,15 @@ import {
   IconClock,
   IconQuestionMark,
 } from "@tabler/icons-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DashboardStats {
   totalAttempts: number;
@@ -43,6 +52,22 @@ interface DashboardStats {
   notAttemptedQuestions: number;
   avgScore: string;
   levelHistory: Array<{ level: string; achievedAt: Date }>;
+}
+
+const LEVEL_ORDER: Record<string, number> = {
+  NL: 1,
+  NM: 2,
+  NH: 3,
+  IL: 4,
+  IM1: 5,
+  IM2: 6,
+  IM3: 7,
+  IH: 8,
+  AL: 9,
+};
+
+function levelToOrder(level: string | null | undefined): number {
+  return level ? LEVEL_ORDER[level] || 0 : 0;
 }
 
 interface UserProfile {
@@ -308,6 +333,75 @@ export default function DashboardPage() {
           </SimpleGrid>
         </Card>
       </SimpleGrid>
+
+      {/* Level Trend Chart */}
+      {stats?.levelHistory && stats.levelHistory.length > 0 && (
+        <Card shadow="sm" radius="lg" padding="lg" withBorder>
+          <Group justify="space-between" mb="md">
+            <Box>
+              <Title order={4} fw={700}>레벨 추이</Title>
+              <Text size="sm" c="dimmed">시간에 따른 레벨 변화 추이</Text>
+            </Box>
+            <Badge size="lg" color="violet" variant="light">
+              최근 {stats.levelHistory.length}회 평가
+            </Badge>
+          </Group>
+          <Box h={250}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={stats.levelHistory.map((h, index) => ({
+                  index: index + 1,
+                  level: levelToOrder(h.level),
+                  levelCode: h.level,
+                  date: new Date(h.achievedAt).toLocaleDateString("ko-KR", {
+                    month: "short",
+                    day: "numeric",
+                  }),
+                }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="index"
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `#${value}`}
+                />
+                <YAxis
+                  domain={[0, 9]}
+                  ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9]}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => LEVEL_ORDER[value] || ""}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <Paper p="xs" withBorder shadow="sm">
+                          <Stack gap={0}>
+                            <Text size="xs" fw={600}>{`#${payload[0].payload.index} 평가`}</Text>
+                            <Text size="xs" c="dimmed">{payload[0].payload.date}</Text>
+                            <Text size="lg" fw={700} c="violet">{payload[0].payload.levelCode}</Text>
+                          </Stack>
+                        </Paper>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="level"
+                  stroke="var(--mantine-color-violet-6)"
+                  strokeWidth={3}
+                  dot={{ fill: "var(--mantine-color-violet-6)", r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
+        </Card>
+      )}
 
       {/* Recent Feedbacks */}
       <Card shadow="sm" radius="lg" padding={0} withBorder>

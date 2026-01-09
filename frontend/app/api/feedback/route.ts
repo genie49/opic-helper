@@ -4,10 +4,57 @@ import {
   feedbacks,
   userQuestionMastery,
   userProfiles,
+  opicLevels,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { withAuth } from "@/lib/api-utils/auth";
 import { handleApiError, validationError } from "@/lib/api-utils/error";
+
+const LEVEL_ORDER: Record<string, number> = {
+  NL: 1,
+  NM: 2,
+  NH: 3,
+  IL: 4,
+  IM1: 5,
+  IM2: 6,
+  IM3: 7,
+  IH: 8,
+  AL: 9,
+};
+
+const ORDER_TO_LEVEL: Record<number, string> = Object.fromEntries(
+  Object.entries(LEVEL_ORDER).map(([k, v]) => [v, k])
+);
+
+function calculateWeightedAverageLevel(
+  recentFeedbacks: { evaluatedLevel: string | null }[]
+): string | null {
+  if (!recentFeedbacks || recentFeedbacks.length === 0) {
+    return null;
+  }
+
+  const n = Math.min(recentFeedbacks.length, 10);
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (let i = 0; i < n; i++) {
+    const feedback = recentFeedbacks[i];
+    const levelCode = feedback.evaluatedLevel;
+    if (!levelCode) continue;
+
+    const levelOrder = LEVEL_ORDER[levelCode];
+    if (!levelOrder) continue;
+
+    const weight = Math.pow(1.2, n - 1 - i);
+    weightedSum += levelOrder * weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight === 0) return null;
+
+  const averageOrder = weightedSum / totalWeight;
+  return ORDER_TO_LEVEL[Math.round(averageOrder)] || null;
+}
 
 export async function POST(request: NextRequest) {
   return withAuth(request, async (userId) => {
@@ -92,11 +139,22 @@ export async function POST(request: NextRequest) {
           });
       }
 
-      // AI 평가 레벨을 바로 프로필에 업데이트
+      // 최근 10개 피드백 조회 후 지수 가중 평균 레벨 계산
+      const recentFeedbacks = await db
+        .select({
+          evaluatedLevel: feedbacks.evaluatedLevel,
+        })
+        .from(feedbacks)
+        .where(eq(feedbacks.userId, userId))
+        .orderBy(desc(feedbacks.createdAt))
+        .limit(10);
+
+      const averageLevel = calculateWeightedAverageLevel(recentFeedbacks);
+
       await db
         .update(userProfiles)
         .set({
-          assessedLevel: evaluatedLevel,
+          assessedLevel: averageLevel,
           updatedAt: new Date(),
         })
         .where(eq(userProfiles.userId, userId));
