@@ -30,7 +30,7 @@ import {
 import {
   IconMicrophone,
   IconVolume,
-  IconSkipForward,
+  IconPlayerSkipForward,
   IconArrowRight,
   IconBulb,
   IconCheck,
@@ -173,7 +173,7 @@ export default function PracticePage() {
           <Button
             variant="outline"
             size="md"
-            leftSection={<IconSkipForward size={18} />}
+            leftSection={<IconPlayerSkipForward size={18} />}
             onClick={handleSkipQuestion}
           >
             건너뛰기
