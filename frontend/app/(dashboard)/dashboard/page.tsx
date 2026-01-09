@@ -92,11 +92,28 @@ interface RecentFeedback {
   createdAt: Date;
 }
 
+interface AchievementLevel {
+  levelCode: string;
+  levelName: string;
+  achieved: boolean;
+  avgUtterance: number;
+  avgWords: number;
+  avgConnectors: number;
+  avgModifiers: number;
+  criteria: {
+    utterance: { target: number; achieved: boolean; percentage: number };
+    words: { target: number; achieved: boolean; percentage: number };
+    connectors: { target: number; achieved: boolean; percentage: number };
+    modifiers: { target: number; achieved: boolean; percentage: number };
+  };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentFeedbacks, setRecentFeedbacks] = useState<RecentFeedback[]>([]);
+  const [achievements, setAchievements] = useState<AchievementLevel[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -105,16 +122,22 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const response = await fetch("/api/dashboard");
+      const [dashboardRes, achievementRes] = await Promise.all([
+        fetch("/api/dashboard"),
+        fetch("/api/achievement"),
+      ]);
 
-      if (!response.ok) {
-        throw new Error("데이터를 불러오는데 실패했습니다.");
+      if (dashboardRes.ok) {
+        const data = await dashboardRes.json();
+        setUser(data.user);
+        setStats(data.stats);
+        setRecentFeedbacks(data.recentFeedbacks);
       }
 
-      const data = await response.json();
-      setUser(data.user);
-      setStats(data.stats);
-      setRecentFeedbacks(data.recentFeedbacks);
+      if (achievementRes.ok) {
+        const data = await achievementRes.json();
+        setAchievements(data.levels);
+      }
     } catch (error) {
       console.error("데이터 로드 실패:", error);
     } finally {
@@ -417,6 +440,116 @@ export default function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </Box>
+        </Card>
+      )}
+
+      {/* Level Achievement Check */}
+      {achievements && achievements.length > 0 && (
+        <Card shadow="sm" radius="lg" padding="lg" withBorder>
+          <Group justify="space-between" mb="md">
+            <Box>
+              <Title order={4} fw={700}>등급별 달성 기준</Title>
+              <Text size="sm" c="dimmed">현재 성취도로 달성 가능한 등급 확인</Text>
+            </Box>
+            <Badge size="lg" color="blue" variant="light">
+              {achievements.filter((a) => a.achieved).length} / {achievements.length} 달성
+            </Badge>
+          </Group>
+
+          <Stack gap="md">
+            {achievements.map((achievement) => (
+              <Paper
+                key={achievement.levelCode}
+                p="md"
+                radius="md"
+                withBorder
+                style={{
+                  backgroundColor: achievement.achieved ? "var(--mantine-color-green-0)" : "var(--mantine-color-gray-0)",
+                  borderColor: achievement.achieved ? "var(--mantine-color-green-6)" : "var(--mantine-color-gray-2)",
+                }}
+              >
+                <Group justify="space-between" mb="xs">
+                  <Group gap="sm">
+                    <Badge
+                      size="lg"
+                      color={achievement.achieved ? "green" : "gray"}
+                      variant={achievement.achieved ? "filled" : "light"}
+                    >
+                      {achievement.levelCode}
+                    </Badge>
+                    <Text fw={700}>{achievement.levelName}</Text>
+                  </Group>
+                  {achievement.achieved && (
+                    <ThemeIcon size="md" radius="xl" color="green">
+                      <IconCheck size={16} />
+                    </ThemeIcon>
+                  )}
+                </Group>
+
+                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs" mt="sm">
+                  {/* Utterance */}
+                  <Stack gap={2}>
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">문장 수</Text>
+                      <Text size="xs" fw={700}>
+                        {achievement.avgUtterance} / {achievement.criteria.utterance.target}
+                      </Text>
+                    </Group>
+                    <Progress
+                      value={achievement.criteria.utterance.percentage}
+                      color={achievement.criteria.utterance.achieved ? "green" : "red"}
+                      size="sm"
+                    />
+                  </Stack>
+
+                  {/* Words */}
+                  <Stack gap={2}>
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">단어 수</Text>
+                      <Text size="xs" fw={700}>
+                        {achievement.avgWords} / {achievement.criteria.words.target}
+                      </Text>
+                    </Group>
+                    <Progress
+                      value={achievement.criteria.words.percentage}
+                      color={achievement.criteria.words.achieved ? "green" : "red"}
+                      size="sm"
+                    />
+                  </Stack>
+
+                  {/* Connectors */}
+                  <Stack gap={2}>
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">접속사</Text>
+                      <Text size="xs" fw={700}>
+                        {achievement.avgConnectors} / {achievement.criteria.connectors.target}
+                      </Text>
+                    </Group>
+                    <Progress
+                      value={achievement.criteria.connectors.percentage}
+                      color={achievement.criteria.connectors.achieved ? "green" : "red"}
+                      size="sm"
+                    />
+                  </Stack>
+
+                  {/* Modifiers */}
+                  <Stack gap={2}>
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">수식어</Text>
+                      <Text size="xs" fw={700}>
+                        {achievement.avgModifiers} / {achievement.criteria.modifiers.target}
+                      </Text>
+                    </Group>
+                    <Progress
+                      value={achievement.criteria.modifiers.percentage}
+                      color={achievement.criteria.modifiers.achieved ? "green" : "red"}
+                      size="sm"
+                    />
+                  </Stack>
+                </SimpleGrid>
+              </Paper>
+            ))}
+          </Stack>
         </Card>
       )}
 

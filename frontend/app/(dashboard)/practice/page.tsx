@@ -141,6 +141,45 @@ export default function PracticePage() {
     }
   };
 
+  const handleGenerateQuestion = async () => {
+    setIsLoadingQuestion(true);
+    try {
+      const response = await fetch("/api/generate-question", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: "일상",
+          questionType: questionTypeFilter || "experience",
+          currentLevel: userLevel.assessedLevel,
+          targetLevel: userLevel.targetLevelCode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("AI 문제 생성 실패");
+      }
+
+      const data = await response.json();
+      setQuestion({
+        id: crypto.randomUUID(),
+        topicName: data.question.topic,
+        questionType: data.question.question_type,
+        questionText: data.question.question_text,
+        expectedAnswerStructure: data.question.expected_answer_structure,
+        keyVocabulary: data.question.key_vocabulary,
+        difficultyLevel: data.question.difficulty_level,
+        isAiGenerated: true,
+      });
+    } catch (error) {
+      console.error("AI 문제 생성 실패:", error);
+      alert(error instanceof Error ? error.message : "AI 문제 생성 실패");
+    } finally {
+      setIsLoadingQuestion(false);
+    }
+  };
+
   const handleFilterChange = (newFilter: string) => {
     setQuestionTypeFilter(newFilter);
     loadQuestion(newFilter);
@@ -336,6 +375,17 @@ export default function PracticePage() {
               {type.label}
             </Button>
           ))}
+          <Button
+            variant="gradient"
+            gradient={{ from: "violet", to: "blue" }}
+            size="xs"
+            radius="xl"
+            leftSection={<IconRobot size={14} />}
+            onClick={handleGenerateQuestion}
+            disabled={isLoadingQuestion}
+          >
+            AI 문제 생성
+          </Button>
         </Group>
       </Box>
 
