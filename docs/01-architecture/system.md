@@ -46,7 +46,6 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 │  - 문제 선택 로직           │  │  │  - 문제 출제 Agent   │   │
 │  - 피드백 저장              │  │  │  - 수준 판별 Agent   │   │
 │  - 수준 업데이트            │  │  │  - 문제 생성 Agent   │   │
-│                             │  │  │  - 롤플레이 Agent    │   │
 └─────────────┬───────────────┘  │  └──────────────────────┘   │
               │                  │                             │
               │                  │  - Grok (xAI)               │
@@ -115,7 +114,7 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 1. **묘사(Description)**: 대상, 장소 설명
 2. **루틴(Routine)**: 과정, 방법 설명
 3. **경험(Experience)**: 특정 사건, 비교
-4. **롤플레이(Role Play)**: 상황극 (11번: 질문, 12번: 문제 해결)
+4. **롤플레이(Role Play)**: 상황극 일방향 독백 (11번: 정보요청, 12번: 문제해결, 13번: 과거경험)
 5. **돌발 문제**: 선택하지 않은 주제
 6. **콤보 문제**: 한 주제의 연속된 문제
 
@@ -135,7 +134,7 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 **문제 소스:**
 - **Phase 1**: DB 문제 풀 사용
 - **Phase 2**: 사용자가 모든 문제 숙달 시 AI가 새 문제 생성
-- **롤플레이**: 실시간 대화형 AI 챗봇
+- **롤플레이**: 일반 문제와 동일하게 처리 (일방향 독백)
 
 ---
 
@@ -177,31 +176,29 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 
 ---
 
-### 6. 롤플레이 특수 처리
+### 6. 롤플레이 문제 유형
 
-#### 실시간 대화형 구조
+> **중요**: OPIc 롤플레이 문제는 대화형이 아닌 **일방향 독백** 형식입니다. 응시자가 한 번에 모든 내용을 말하며, 시스템이 응답하지 않습니다.
+
+#### OPIc 실제 형식 (11-12-13번 연속)
 
 **11번 문제 (정보 요청):**
-```
-1. AI가 상황 제시 (예: "친구와 영화를 보려고 합니다")
-2. 사용자가 질문 (음성)
-   → AI가 실시간 응답
-3. 3~4개 질문 반복
-4. 종료 후 평가
-```
+- 상황: "친구와 영화를 보려고 합니다. 극장에 전화해서 3-4가지 질문을 하세요."
+- 응시자가 모든 질문을 한 번에 말함 (시스템 응답 없음)
 
 **12번 문제 (문제 해결):**
-```
-1. AI가 문제 상황 제시
-2. 사용자가 문제 설명 + 대안 제시 (음성)
-   → AI가 각 대안에 반응
-3. 종료 후 평가
-```
+- 상황: "예약한 영화가 취소되었습니다. 문제를 설명하고 대안을 제시하세요."
+- 응시자가 문제 설명과 해결책을 한 번에 말함
+
+**13번 문제 (과거 경험):**
+- 상황: "비슷한 문제 상황을 경험한 적이 있나요? 그 경험에 대해 말해주세요."
+- 응시자가 과거 경험을 한 번에 설명
 
 #### 구현 방식
-- **LangChain Agent** 활용
-- **대화 컨텍스트 유지**
-- **자연스러운 응답 생성**
+- 롤플레이는 별도 API 없이 **일반 문제와 동일하게 처리**
+- `questionType: "roleplay"`로 구분
+- `roleplayContext`에 상황 설명 저장
+- 다른 문제 유형과 동일한 평가 플로우 적용
 
 ---
 
@@ -244,10 +241,11 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 - **역할**:
   - LangChain Agent 실행
   - 답변 평가 및 피드백 생성 (SSE 스트리밍)
-  - 롤플레이 실시간 대화
   - 동적 문제 생성 (Phase 3)
   - 모든 요청에 대한 인증 검증 (로그인 필수)
   - **DB 읽기 작업만** (사용자 정보, 문제 조회)
+
+> **참고**: OPIc 롤플레이는 일방향 독백이므로 별도 대화 API가 필요 없습니다.
 
 ### Database
 - **Primary**: Supabase (PostgreSQL 15+)
@@ -308,7 +306,6 @@ OPIc(Oral Proficiency Interview - computer) 시험 준비를 위한 AI 기반 �
 #### 역할
 - 사용자 수준 및 서베이 기반 문제 선택
 - 가중치 로직 적용 (약한 문제, 새 문제)
-- 롤플레이 실시간 대화 진행
 - 문제 생성 (숙달 후)
 
 #### 입력
@@ -555,53 +552,21 @@ Frontend: 피드백 표시
 
 ---
 
-### 3. 롤플레이 플로우 (SSE 대화)
+### 3. 롤플레이 문제 처리
+
+> **참고**: OPIc 롤플레이 문제(11-12-13번)는 응시자가 한 번에 모든 내용을 말하는 **일방향 독백** 형식입니다. 시스템이 응답하는 대화형이 아니므로, 별도의 롤플레이 API 없이 일반 문제와 동일한 플로우로 처리됩니다.
 
 ```
-[11번 문제 - 정보 요청]
-Frontend → FastAPI: POST /roleplay/start
-    (Header: Authorization: Bearer {token})
+롤플레이 문제 표시 (roleplayContext 포함)
     ↓
-FastAPI: JWT 검증
+사용자: 전체 내용을 한 번에 말함 (음성)
     ↓
-FastAPI: 상황 제시 + 대화 세션 생성
+Frontend: Whisper WebGPU (STT)
     ↓
-Frontend: 상황 표시
+Frontend → FastAPI: POST /evaluate (일반 평가와 동일)
     ↓
-사용자: 질문 1 (음성) → STT → 텍스트
-    ↓
-Frontend → FastAPI: POST /roleplay/chat (SSE)
-    (Header: Authorization: Bearer {token})
-    ↓
-FastAPI: JWT 검증
-    ↓ (스트리밍 응답)
-AI 응답 생성 중... (단어별 스트리밍)
-    ↓
-Frontend: 타이핑 효과로 표시
-    ↓
-사용자: 질문 2 (음성) → STT → 텍스트
-    ↓
-Frontend → FastAPI: POST /roleplay/chat (SSE)
-    ↓
-AI 응답 생성 중...
-    ↓
-... (3~4개 질문 반복)
-    ↓
-Frontend → FastAPI: POST /roleplay/end
-    ↓
-FastAPI: 대화 전체 평가 (수준 판별 Agent)
-    ↓
-Frontend ← FastAPI: 평가 결과
-    ↓
-Frontend → Next.js API: POST /api/feedback/save
-    ↓
-피드백 표시
+평가 및 피드백 (일반 문제와 동일)
 ```
-
-**롤플레이 SSE 특징:**
-- 단어별 스트리밍으로 자연스러운 대화 느낌
-- LangChain Memory로 대화 컨텍스트 유지
-- 실시간 응답으로 실제 시험과 유사한 경험
 
 ---
 
@@ -630,7 +595,7 @@ Frontend → Next.js API: POST /api/feedback/save
 2. ✅ **가중치 기반 문제 출제** (약한 주제 집중)
 3. ✅ **발음 평가** (발음 정확도 분석)
 4. ✅ **대시보드** (수준 진행도, 학습 통계)
-5. ✅ **롤플레이 기본 구현** (11번, 12번 문제)
+5. ✅ **롤플레이 문제 지원** (일반 문제와 동일한 플로우)
 6. ⏳ **모바일 반응형** (UX 개선)
 
 **예상 기간**: 3~4주
@@ -641,10 +606,9 @@ Frontend → Next.js API: POST /api/feedback/save
 **목표**: AI 기반 동적 학습
 
 1. ⏳ **문제 생성 Agent** (LangChain 기반)
-2. ⏳ **롤플레이 실시간 대화** (LangChain Agent 활용)
-3. ⏳ **개인화 추천** (약한 주제/유형 자동 파악)
-4. ⏳ **학습 경로 최적화** (AI가 학습 순서 제안)
-5. ⏳ **다중 Agent 협업** (LangGraph 활용)
+2. ⏳ **개인화 추천** (약한 주제/유형 자동 파악)
+3. ⏳ **학습 경로 최적화** (AI가 학습 순서 제안)
+4. ⏳ **다중 Agent 협업** (LangGraph 활용)
 
 **예상 기간**: 4~6주
 

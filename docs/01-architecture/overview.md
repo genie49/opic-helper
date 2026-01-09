@@ -64,8 +64,8 @@
 │  - 인증 검증 (JWT)        │    │  - 인증 검증 (JWT)              │
 │  - DB CRUD 작업           │    │  - LangChain Agents 실행        │
 │  - 문제 선택 로직         │    │  - 답변 평가 (SSE 스트리밍)     │
-│  - 피드백 저장            │    │  - 롤플레이 대화 (SSE)          │
-│  - 사용자 수준 업데이트   │    │  - 문제 생성 (Phase 3)          │
+│  - 피드백 저장            │    │  - 문제 생성 (Phase 3)          │
+│  - 사용자 수준 업데이트   │    │                                 │
 │                           │    │                                 │
 │  기술 스택:               │    │  기술 스택:                     │
 │  - TypeScript             │    │  - Python 3.11+                 │
@@ -170,16 +170,14 @@ GET    /api/dashboard          # 대시보드 데이터
 **책임:**
 - LangChain Agent 실행
 - 답변 평가 (SSE 스트리밍)
-- 롤플레이 실시간 대화
 - 문제 생성 (Phase 3)
 - **DB 읽기만 가능** (쓰기는 Next.js API)
+
+> **참고**: OPIc 롤플레이 문제는 대화형이 아닌 일방향 독백입니다. 별도의 롤플레이 API 없이 일반 문제와 동일하게 처리됩니다.
 
 **주요 엔드포인트:**
 ```
 POST   /evaluate               # 답변 평가 (SSE)
-POST   /roleplay/start         # 롤플레이 시작
-POST   /roleplay/chat          # 롤플레이 대화 (SSE)
-POST   /roleplay/end           # 롤플레이 종료
 POST   /generate-question      # 동적 문제 생성 (Phase 3)
 GET    /health                 # 헬스 체크
 ```
@@ -192,7 +190,7 @@ GET    /health                 # 헬스 체크
 - Pydantic (데이터 검증)
 
 **AI Agents:**
-1. **문제 출제 Agent**: 가중치 기반 문제 선택, 롤플레이 진행
+1. **문제 출제 Agent**: 가중치 기반 문제 선택
 2. **수준 판별 Agent**: 5가지 기준 평가, 피드백 생성
 3. **문제 생성 Agent**: 동적 문제 생성 (Phase 3)
 
@@ -309,41 +307,7 @@ Next.js API: Drizzle ORM으로 DB 저장
 Frontend: 피드백 표시
 ```
 
-### 4. 롤플레이 플로우
-
-```
-Frontend → FastAPI: POST /roleplay/start
-    ↓
-FastAPI: 상황 제시 + 대화 세션 생성
-    ↓
-Frontend: 상황 표시
-    ↓
-[반복 시작]
-사용자: 음성 질문
-    ↓
-Frontend: Whisper WebGPU (STT)
-    ↓
-Frontend → FastAPI: POST /roleplay/chat (SSE)
-    Body: { session_id, message: "What time are you open?" }
-    ↓
-FastAPI: LangChain Memory + Agent
-    ↓
-AI 응답 생성 (단어별 스트리밍)
-    ↓
-Frontend: 타이핑 효과로 표시
-    ↓
-[3~4회 반복]
-    ↓
-Frontend → FastAPI: POST /roleplay/end
-    ↓
-FastAPI: 전체 대화 평가
-    ↓
-Frontend ← 평가 결과
-    ↓
-Frontend → Next.js API: POST /api/feedback/save
-    ↓
-피드백 표시
-```
+> **참고**: OPIc 롤플레이 문제(11-12-13번)는 응시자가 한 번에 모든 내용을 말하는 일방향 독백 형식입니다. 시스템이 응답하는 대화형이 아니므로, 일반 문제와 동일한 플로우로 처리됩니다.
 
 ---
 
@@ -628,13 +592,13 @@ Option 2 (Production):
 2. ⏳ 가중치 기반 문제 출제
 3. ⏳ 단어 수준 발음 평가
 4. ⏳ 대시보드 및 통계
-5. ⏳ 롤플레이 기본 구현
+5. ⏳ 문제 유형별 필터링 (롤플레이 포함)
 
 **Phase 3: AI 고도화 (4~6주)**
 1. ⏳ 문제 생성 Agent
 2. ⏳ Grok 기반 발음 추론
-3. ⏳ 롤플레이 실시간 대화
-4. ⏳ 개인화 추천
+3. ⏳ 개인화 추천
+4. ⏳ 학습 경로 최적화
 
 **Phase 4: 프로덕션 (2~3주)**
 1. ⏳ 성능 최적화

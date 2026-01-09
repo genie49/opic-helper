@@ -26,8 +26,8 @@
 │ (Vercel)          │  │ (GCP Cloud Run)  │
 │                   │  │                  │
 │ - DB CRUD         │  │ - AI 평가        │
-│ - 문제 선택       │  │ - 롤플레이       │
-│ - 피드백 저장     │  │ - SSE 스트리밍   │
+│ - 문제 선택       │  │ - SSE 스트리밍   │
+│ - 피드백 저장     │  │ - 문제 생성      │
 └───────────────────┘  └──────────────────┘
 ```
 
@@ -535,9 +535,11 @@ Authorization: Bearer {token}
 ### 개요
 
 - **Base URL**: `https://fastapi-server-xxx-uc.a.run.app`
-- **역할**: AI 평가, 롤플레이, 문제 생성
+- **역할**: AI 평가, 문제 생성
 - **인증**: Supabase JWT 검증
 - **응답 형식**: SSE (Server-Sent Events) + JSON
+
+> **참고**: OPIc 롤플레이 문제는 대화형이 아닌 일방향 독백입니다. 응시자가 한 번에 모든 내용을 말하는 형식이므로, 별도의 롤플레이 API 없이 일반 문제와 동일하게 처리됩니다.
 
 ---
 
@@ -664,112 +666,7 @@ eventSource.addEventListener('error', (e) => {
 
 ---
 
-### 3. 롤플레이 (Roleplay)
-
-#### `POST /roleplay/start`
-
-롤플레이 시작
-
-**요청:**
-```http
-POST /roleplay/start
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "question_id": "q-rp-001",
-  "scenario": "친구와 영화를 보려고 합니다. 극장에 전화하세요.",
-  "user_role": "고객",
-  "ai_role": "극장 직원"
-}
-```
-
-**응답:**
-```json
-{
-  "session_id": "rp-session-123",
-  "scenario": "친구와 영화를 보려고 합니다. 극장에 전화하세요.",
-  "initial_message": "Hello! Thank you for calling Star Cinema. How can I help you today?",
-  "expected_interactions": 3
-}
-```
-
-#### `POST /roleplay/chat`
-
-롤플레이 대화 (SSE)
-
-**요청:**
-```http
-POST /roleplay/chat
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "session_id": "rp-session-123",
-  "message": "What movies are showing today?"
-}
-```
-
-**응답 (SSE Stream):**
-```
-event: message
-data: {"content": "We're", "done": false}
-
-event: message
-data: {"content": " showing", "done": false}
-
-event: message
-data: {"content": " Avatar 2,", "done": false}
-
-event: message
-data: {"content": " Spider-Man,", "done": false}
-
-event: message
-data: {"content": " and The Batman.", "done": false}
-
-event: message
-data: {"done": true}
-```
-
-#### `POST /roleplay/end`
-
-롤플레이 종료 및 평가
-
-**요청:**
-```http
-POST /roleplay/end
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "session_id": "rp-session-123"
-}
-```
-
-**응답:**
-```json
-{
-  "conversation_count": 3,
-  "evaluation": {
-    "evaluated_level": "IH",
-    "scores": {
-      "interaction": 9,
-      "appropriateness": 8,
-      "fluency": 7,
-      "total": 24
-    },
-    "feedback": {
-      "strengths": ["자연스러운 질문", "적절한 응답"],
-      "weaknesses": ["발음 개선 필요"],
-      "improvements": ["더 다양한 표현 활용"]
-    }
-  }
-}
-```
-
----
-
-### 4. 문제 생성 (Phase 3)
+### 3. 문제 생성 (Phase 3)
 
 #### `POST /generate-question`
 
@@ -887,7 +784,7 @@ Content-Type: application/json
 
 # FastAPI
 - AI 평가: 10 requests / 1분
-- 롤플레이: 5 requests / 1분
+- 문제 생성: 5 requests / 1분
 ```
 
 ### 응답 헤더
@@ -909,7 +806,7 @@ X-RateLimit-Reset: 1705320000
 type OpicLevel = 'NL' | 'NM' | 'NH' | 'IL' | 'IM1' | 'IM2' | 'IM3' | 'IH' | 'AL';
 
 // 문제 유형
-type QuestionType = 'description' | 'routine' | 'experience' | 'roleplay' | 'surprise' | 'combo';
+type QuestionType = 'description' | 'routine' | 'experience' | 'comparison' | 'roleplay';
 
 // 숙달 단계
 type MasteryLevel = 0 | 1 | 2 | 3; // 0: 미시도, 1: 시도, 2: 부분숙달, 3: 숙달
