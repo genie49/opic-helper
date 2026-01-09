@@ -143,11 +143,13 @@ export const feedbacks = pgTable(
     evaluatedLevel: varchar("evaluated_level", { length: 10 }),
     scores: jsonb("scores").notNull(),
     feedback: jsonb("feedback").notNull(),
+    examSessionId: uuid("exam_session_id"), // FK to exam_sessions (optional)
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => ({
     userIdx: index("idx_feedbacks_user").on(table.userId),
     createdIdx: index("idx_feedbacks_created").on(table.createdAt),
+    examSessionIdx: index("idx_feedbacks_exam_session").on(table.examSessionId),
   })
 );
 
@@ -169,6 +171,26 @@ export const questionWeights = pgTable(
       table.topicName,
       table.questionType
     ),
+  })
+);
+
+// 9. Exam Sessions
+export const examSessions = pgTable(
+  "exam_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull(), // FK to auth.users
+    questionIds: text("question_ids").array().notNull(), // Array of question UUIDs
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    totalTimeSpent: integer("total_time_spent").default(0), // Total time in seconds
+    totalScore: integer("total_score"), // Sum of all question scores
+    averageLevel: varchar("average_level", { length: 10 }), // Average evaluated level
+    report: jsonb("report"), // Comprehensive exam report
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("idx_exam_sessions_user").on(table.userId),
+    completedIdx: index("idx_exam_sessions_completed").on(table.completedAt),
   })
 );
 
@@ -203,4 +225,12 @@ export const feedbacksRelations = relations(feedbacks, ({ one }) => ({
     fields: [feedbacks.questionId],
     references: [questions.id],
   }),
+  examSession: one(examSessions, {
+    fields: [feedbacks.examSessionId],
+    references: [examSessions.id],
+  }),
+}));
+
+export const examSessionsRelations = relations(examSessions, ({ many }) => ({
+  feedbacks: many(feedbacks),
 }));

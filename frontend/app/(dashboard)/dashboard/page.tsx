@@ -34,6 +34,7 @@ import {
   IconCheck,
   IconClock,
   IconQuestionMark,
+  IconAward,
 } from "@tabler/icons-react";
 import {
   LineChart,
@@ -271,6 +272,22 @@ export default function DashboardPage() {
               }}
             >
               실전 연습 문제 풀기
+            </Button>
+            <Divider />
+            <Button
+              variant="subtle"
+              size="xl"
+              justify="flex-start"
+              leftSection={<IconAward size={22} />}
+              rightSection={<IconArrowRight size={16} style={{ marginLeft: "auto" }} />}
+              onClick={() => router.push("/exam")}
+              fullWidth
+              styles={{
+                root: { borderRadius: 0, height: rem(64) },
+                inner: { justifyContent: "flex-start" },
+              }}
+            >
+              OPIc 모의고사
             </Button>
             <Divider />
             <Button
