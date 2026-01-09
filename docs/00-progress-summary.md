@@ -151,7 +151,7 @@
 | Vercel 배포 (Frontend) | 높음 | ⏳ 예정 |
 | Railway 배포 (Backend) | 높음 | ⏳ 예정 |
 | 테스트 작성 | 중간 | ✅ 완료 (높음+중간) |
-| 모바일 반응형 | 낮음 | ⏳ 예정 |
+| 모바일 반응형 | 낮음 | ✅ 완료 (Mantine UI + Tailwind CSS) |
 
 ---
 
