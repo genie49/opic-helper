@@ -7,8 +7,17 @@ import EvaluationFeedback from "@/components/EvaluationFeedback";
 import { evaluateAnswer } from "@/lib/services/mockEvaluation";
 import { TranscriptionResult } from "@/lib/whisper/WhisperService";
 import { evaluateWithAI, shouldUseAI, EvaluationProgress } from "@/lib/services/aiEvaluation";
-import { roleplayChatSSE, startRoleplay } from "@/lib/api/sseClient";
+import { roleplayChatSSE, startRoleplay, endRoleplay } from "@/lib/api/sseClient";
 import { createClient } from "@/lib/supabase/client";
+
+// AI 사용 여부 확인
+function shouldUseAIRoleplay(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!process.env.NEXT_PUBLIC_FASTAPI_URL &&
+    process.env.NEXT_PUBLIC_USE_AI_EVALUATION === "true"
+  );
+}
 import {
   Card,
   Text,
@@ -63,6 +72,13 @@ interface Question {
   roleplayContext?: RoleplayContext;
 }
 
+interface ChatMessage {
+  role: "user" | "ai";
+  content: string;
+  transcriptionResult?: TranscriptionResult;
+  isStreaming?: boolean;
+}
+
 export default function RoleplayPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
@@ -82,6 +98,12 @@ export default function RoleplayPage() {
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
+
+  // AI 롤플레이 상태
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isAiResponding, setIsAiResponding] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
 
   useEffect(() => {
     loadQuestion();
@@ -121,8 +143,42 @@ export default function RoleplayPage() {
     }
   };
 
-  const startConversation = () => {
+  const startConversation = async () => {
+    if (!question) return;
+
     setIsConversationStarted(true);
+    setChatMessages([]);
+    setSessionId(null);
+
+    // AI 롤플레이 사용 시 세션 시작
+    if (shouldUseAIRoleplay() && question.roleplayContext) {
+      try {
+        setIsAiResponding(true);
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          const context = question.roleplayContext;
+          const result = await startRoleplay(session.access_token, {
+            scenario: context.scenario,
+            ai_role: context.role,
+            ai_role_details: context.context,
+            expected_interactions: context.expected_interactions,
+          });
+
+          setSessionId(result.session_id);
+          // AI 첫 인사 추가
+          setChatMessages([
+            { role: "ai", content: result.greeting },
+          ]);
+        }
+      } catch (error) {
+        console.error("AI 세션 시작 실패:", error);
+        // Mock 모드로 fallback
+      } finally {
+        setIsAiResponding(false);
+      }
+    }
   };
 
   const generateFollowUpQuestion = (index: number): string => {
@@ -143,97 +199,248 @@ export default function RoleplayPage() {
       setIsSaving(true);
       setEvaluationProgress(null);
 
-      let evaluation;
+      // 사용자 메시지 추가
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: result.text,
+        transcriptionResult: result,
+      };
+      setChatMessages(prev => [...prev, userMessage]);
 
-      // AI 평가 사용 여부 확인
-      if (shouldUseAI()) {
+      const expectedInteractions =
+        question.roleplayContext?.expected_interactions || 3;
+      const newInteractionCount = currentInteraction + 1;
+
+      // AI 롤플레이 모드
+      if (shouldUseAIRoleplay() && sessionId && question.roleplayContext) {
+        setIsAiResponding(true);
+        setStreamingContent("");
+
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.access_token) {
-          const aiResult = await evaluateWithAI(
+          const context = question.roleplayContext;
+
+          // 스트리밍 AI 메시지 placeholder 추가
+          setChatMessages(prev => [
+            ...prev,
+            { role: "ai", content: "", isStreaming: true },
+          ]);
+
+          await roleplayChatSSE(
             session.access_token,
-            question.id,
-            question.questionText,
-            result.text,
-            "IM2", // 현재 레벨 (추후 사용자 설정에서 가져오기)
-            "IH",  // 목표 레벨
             {
-              onProgress: (progress) => setEvaluationProgress(progress),
+              session_id: sessionId,
+              message: result.text,
+              scenario: context.scenario,
+              ai_role: context.role,
+              ai_role_details: context.context,
+            },
+            {
+              onChunk: (data) => {
+                setStreamingContent(prev => prev + data.content);
+                // 스트리밍 메시지 업데이트
+                setChatMessages(prev => {
+                  const updated = [...prev];
+                  const lastIdx = updated.length - 1;
+                  if (updated[lastIdx]?.isStreaming) {
+                    updated[lastIdx] = {
+                      ...updated[lastIdx],
+                      content: updated[lastIdx].content + data.content,
+                    };
+                  }
+                  return updated;
+                });
+              },
+              onDone: (data) => {
+                // 스트리밍 완료, isStreaming false로 변경
+                setChatMessages(prev => {
+                  const updated = [...prev];
+                  const lastIdx = updated.length - 1;
+                  if (updated[lastIdx]?.isStreaming) {
+                    updated[lastIdx] = {
+                      ...updated[lastIdx],
+                      content: data.content,
+                      isStreaming: false,
+                    };
+                  }
+                  return updated;
+                });
+                setStreamingContent("");
+                setIsAiResponding(false);
+
+                // 대화 횟수 업데이트
+                if (data.conversation_count !== undefined) {
+                  setCurrentInteraction(data.conversation_count);
+
+                  // 대화 완료 체크
+                  if (data.conversation_count >= expectedInteractions) {
+                    finishConversation(result.text);
+                  }
+                }
+              },
+              onError: (error) => {
+                console.error("AI 응답 오류:", error.message);
+                setIsAiResponding(false);
+                // 스트리밍 메시지 제거
+                setChatMessages(prev => prev.filter(m => !m.isStreaming));
+              },
             }
           );
-
-          if (aiResult) {
-            evaluation = aiResult;
-          }
         }
-      }
-
-      // AI 평가 실패시 Mock 평가 사용
-      if (!evaluation) {
-        evaluation = evaluateAnswer(result.text, question.questionText);
-      }
-
-      const newInteraction = {
-        question: currentQuestion,
-        answer: result.text,
-        transcriptionResult: result,
-        evaluationResult: evaluation,
-      };
-
-      const updatedInteractions = [...interactions, newInteraction];
-      setInteractions(updatedInteractions);
-
-      const expectedInteractions =
-        question.roleplayContext?.expected_interactions || 3;
-
-      if (currentInteraction < expectedInteractions - 1) {
-        setCurrentInteraction(currentInteraction + 1);
-        setCurrentQuestion(generateFollowUpQuestion(currentInteraction));
       } else {
-        setShowFeedback(true);
+        // Mock 모드
+        let evaluation = evaluateAnswer(result.text, question.questionText);
 
-        const allAnswers = updatedInteractions.map((i) => i.answer).join(" ");
+        const newInteraction = {
+          question: currentQuestion,
+          answer: result.text,
+          transcriptionResult: result,
+          evaluationResult: evaluation,
+        };
 
-        const response = await fetch("/api/feedback", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            questionId: question.id,
-            answerText: allAnswers,
-            evaluatedLevel: evaluation.evaluated_level,
-            scores: evaluation.scores,
-            feedback: evaluation.feedback,
-          }),
-        });
+        const updatedInteractions = [...interactions, newInteraction];
+        setInteractions(updatedInteractions);
 
-        if (!response.ok) {
-          throw new Error("피드백 저장에 실패했습니다.");
+        if (newInteractionCount < expectedInteractions) {
+          setCurrentInteraction(newInteractionCount);
+          const followUp = generateFollowUpQuestion(currentInteraction);
+          setCurrentQuestion(followUp);
+
+          // Mock AI 응답 추가
+          setChatMessages(prev => [
+            ...prev,
+            { role: "ai", content: followUp },
+          ]);
+        } else {
+          setShowFeedback(true);
+
+          const allAnswers = updatedInteractions.map((i) => i.answer).join(" ");
+
+          await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              questionId: question.id,
+              answerText: allAnswers,
+              evaluatedLevel: evaluation.evaluated_level,
+              scores: evaluation.scores,
+              feedback: evaluation.feedback,
+            }),
+          });
         }
       }
     } catch (error) {
-      console.error("평가 및 저장 실패:", error);
-      alert("평가 결과 저장에 실패했습니다.");
+      console.error("대화 처리 실패:", error);
+      alert("대화 처리에 실패했습니다.");
     } finally {
       setIsSaving(false);
       setEvaluationProgress(null);
     }
   };
 
-  const handleReset = () => {
+  // 대화 완료 처리
+  const finishConversation = async (lastAnswer: string) => {
+    if (!question) return;
+
+    setShowFeedback(true);
+
+    // 전체 답변 합치기
+    const allAnswers = chatMessages
+      .filter(m => m.role === "user")
+      .map(m => m.content)
+      .join(" ") + " " + lastAnswer;
+
+    // AI 평가 요청
+    let evaluation;
+    if (shouldUseAI()) {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        evaluation = await evaluateWithAI(
+          session.access_token,
+          question.id,
+          question.questionText,
+          allAnswers,
+          "IM2",
+          "IH",
+          { onProgress: (progress) => setEvaluationProgress(progress) }
+        );
+      }
+    }
+
+    if (!evaluation) {
+      evaluation = evaluateAnswer(allAnswers, question.questionText);
+    }
+
+    // interactions에 최종 평가 추가
+    setInteractions([{
+      question: question.questionText,
+      answer: allAnswers,
+      evaluationResult: evaluation,
+    }]);
+
+    // 피드백 저장
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questionId: question.id,
+        answerText: allAnswers,
+        evaluatedLevel: evaluation.evaluated_level,
+        scores: evaluation.scores,
+        feedback: evaluation.feedback,
+      }),
+    });
+
+    // 세션 종료
+    if (sessionId) {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        try {
+          await endRoleplay(session.access_token, sessionId);
+        } catch (e) {
+          console.error("세션 종료 실패:", e);
+        }
+      }
+    }
+  };
+
+  const handleReset = async () => {
+    // 기존 세션 종료
+    if (sessionId) {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        try {
+          await endRoleplay(session.access_token, sessionId);
+        } catch (e) {
+          console.error("세션 종료 실패:", e);
+        }
+      }
+    }
+
     setCurrentInteraction(0);
     setInteractions([]);
     setShowFeedback(false);
-    setIsConversationStarted(true);
     setTextInput("");
+    setChatMessages([]);
+    setSessionId(null);
+    setIsAiResponding(false);
+    setStreamingContent("");
+
     if (question?.questionType === "roleplay" && question.roleplayContext) {
       const context = question.roleplayContext as RoleplayContext;
       setCurrentQuestion(`${context.scenario}\n\n${question.questionText}`);
     } else {
       setCurrentQuestion(question?.questionText || "");
     }
+
+    // 대화 다시 시작
+    startConversation();
   };
 
   const handleTextSubmit = () => {
@@ -514,70 +721,84 @@ export default function RoleplayPage() {
                   )}
 
                   {/* Chat Messages */}
-                  {interactions.length > 0
-                    ? interactions.map((interaction, index) => (
+                  {chatMessages.length > 0
+                    ? chatMessages.map((message, index) => (
                         <Stack key={index} gap="lg">
-                          {/* User Message */}
-                          <Group justify="flex-end">
-                            <Stack gap={4} align="flex-end" maw="80%">
-                              <Paper
-                                p="md"
-                                radius="lg"
-                                bg="indigo.6"
-                                c="white"
-                                style={{ borderTopRightRadius: 4 }}
-                              >
-                                <Text size="sm">{interaction.answer}</Text>
-                              </Paper>
-                              <Text size="xs" c="dimmed">
-                                You · {index + 1}번째 발화
-                              </Text>
-                            </Stack>
-                          </Group>
+                          {message.role === "user" ? (
+                            <>
+                              {/* User Message */}
+                              <Group justify="flex-end">
+                                <Stack gap={4} align="flex-end" maw="80%">
+                                  <Paper
+                                    p="md"
+                                    radius="lg"
+                                    bg="indigo.6"
+                                    c="white"
+                                    style={{ borderTopRightRadius: 4 }}
+                                  >
+                                    <Text size="sm">{message.content}</Text>
+                                  </Paper>
+                                  <Text size="xs" c="dimmed">
+                                    You
+                                  </Text>
+                                </Stack>
+                              </Group>
 
-                          {/* AI Message */}
-                          <Group align="flex-start">
-                            <Avatar
-                              size="sm"
-                              radius="md"
-                              color="indigo"
-                              variant="light"
-                            >
-                              AI
-                            </Avatar>
-                            <Stack gap={4} maw="80%">
-                              <Paper
-                                p="md"
-                                radius="lg"
-                                bg="white"
-                                withBorder
-                                style={{ borderTopLeftRadius: 4 }}
-                              >
-                                <Text size="sm" fw={500} fs="italic">
-                                  "{interaction.question}"
-                                </Text>
-                              </Paper>
-                              <Text size="xs" c="dimmed">
-                                AI Assistant
-                              </Text>
-                            </Stack>
-                          </Group>
-
-                          {/* Pronunciation Feedback */}
-                          {interaction.transcriptionResult &&
-                            index === interactions.length - 1 &&
-                            !showFeedback && (
-                              <Card
-                                shadow="sm"
+                              {/* Pronunciation Feedback for last user message */}
+                              {message.transcriptionResult &&
+                                index === chatMessages.length - 1 &&
+                                !showFeedback &&
+                                !isAiResponding && (
+                                  <Card
+                                    shadow="sm"
+                                    radius="md"
+                                    padding={0}
+                                    withBorder
+                                  >
+                                    <PronunciationFeedback
+                                      result={message.transcriptionResult}
+                                    />
+                                  </Card>
+                                )}
+                            </>
+                          ) : (
+                            /* AI Message */
+                            <Group align="flex-start">
+                              <Avatar
+                                size="sm"
                                 radius="md"
-                                padding={0}
-                                withBorder
+                                color="indigo"
+                                variant="light"
                               >
-                                <PronunciationFeedback
-                                  result={interaction.transcriptionResult}
-                                />
-                              </Card>
-                            )}
+                                AI
+                              </Avatar>
+                              <Stack gap={4} maw="80%">
+                                <Paper
+                                  p="md"
+                                  radius="lg"
+                                  bg="white"
+                                  withBorder
+                                  style={{ borderTopLeftRadius: 4 }}
+                                >
+                                  <Text size="sm" fw={500}>
+                                    {message.content}
+                                    {message.isStreaming && (
+                                      <Text
+                                        component="span"
+                                        c="indigo"
+                                        className="animate-pulse"
+                                      >
+                                        ▌
+                                      </Text>
+                                    )}
+                                  </Text>
+                                </Paper>
+                                <Text size="xs" c="dimmed">
+                                  AI · {question?.roleplayContext?.role || "Assistant"}
+                                </Text>
+                              </Stack>
+                            </Group>
+                          )}
                         </Stack>
                       ))
                     : !isConversationStarted && (
