@@ -4,7 +4,7 @@ LangChain v1 기반으로 구현.
 """
 
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
+from langchain_xai import ChatXAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
@@ -89,11 +89,10 @@ EVALUATION_SYSTEM_PROMPT = """당신은 OPIc 평가 전문가입니다.
 def create_evaluation_agent():
     """평가 Agent 생성"""
 
-    # Grok LLM (OpenAI 호환 API)
-    llm = ChatOpenAI(
+    # Grok LLM (xAI)
+    llm = ChatXAI(
         model=settings.XAI_MODEL,
         api_key=settings.XAI_API_KEY,
-        base_url=settings.XAI_API_BASE,
         temperature=0.3,  # 일관된 평가를 위해 낮은 temperature
     )
 

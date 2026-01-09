@@ -3,7 +3,7 @@ OPIc 롤플레이 대화 Agent.
 AI가 상대역을 맡아 자연스러운 대화를 진행.
 """
 
-from langchain_openai import ChatOpenAI
+from langchain_xai import ChatXAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -65,11 +65,10 @@ You: "Yes, we have free parking in the back."
 def create_roleplay_agent():
     """롤플레이 Agent 생성"""
 
-    # Grok LLM
-    llm = ChatOpenAI(
+    # Grok LLM (xAI)
+    llm = ChatXAI(
         model=settings.XAI_MODEL,
         api_key=settings.XAI_API_KEY,
-        base_url=settings.XAI_API_BASE,
         temperature=0.7,  # 자연스러운 대화를 위해 약간 높은 temperature
     )
 
@@ -144,11 +143,10 @@ async def generate_roleplay_response_stream(
     Yields:
         응답 텍스트 청크
     """
-    # Grok LLM with streaming
-    llm = ChatOpenAI(
+    # Grok LLM (xAI) with streaming
+    llm = ChatXAI(
         model=settings.XAI_MODEL,
         api_key=settings.XAI_API_KEY,
-        base_url=settings.XAI_API_BASE,
         temperature=0.7,
         streaming=True,
     )
