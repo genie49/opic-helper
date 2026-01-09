@@ -23,7 +23,6 @@ import {
 } from "@mantine/core";
 import {
   IconMicrophone,
-  IconMessages,
   IconSettings,
   IconTrophy,
   IconFlame,
@@ -247,22 +246,6 @@ export default function DashboardPage() {
               }}
             >
               실전 연습 문제 풀기
-            </Button>
-            <Divider />
-            <Button
-              variant="subtle"
-              size="xl"
-              justify="flex-start"
-              leftSection={<IconMessages size={22} />}
-              rightSection={<IconArrowRight size={16} style={{ marginLeft: "auto" }} />}
-              onClick={() => router.push("/roleplay")}
-              fullWidth
-              styles={{
-                root: { borderRadius: 0, height: rem(64) },
-                inner: { justifyContent: "flex-start" },
-              }}
-            >
-              AI 롤플레이 연습
             </Button>
             <Divider />
             <Button

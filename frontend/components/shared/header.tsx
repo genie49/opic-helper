@@ -35,12 +35,6 @@ export async function Header() {
                   연습하기
                 </Link>
                 <Link
-                  href="/roleplay"
-                  className="px-3 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-                >
-                  롤플레이
-                </Link>
-                <Link
                   href="/history"
                   className="px-3 py-2 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground"
                 >
