@@ -49,16 +49,17 @@ export default function Home() {
       }}
     >
       {/* Hero Section */}
-      <Container size="lg" pt={rem(120)} pb={rem(80)}>
+      <Container size="lg" pt={{ base: rem(80), md: rem(120) }} pb={{ base: rem(60), md: rem(80) }}>
         <Stack align="center" gap="xl">
           <Title
             order={1}
             ta="center"
-            fz={{ base: rem(36), sm: rem(48), md: rem(56) }}
+            fz={{ base: rem(32), sm: rem(48), md: rem(56) }}
             fw={800}
-            style={{ letterSpacing: "-0.02em" }}
+            style={{ letterSpacing: "-0.02em", lineHeight: 1.2 }}
           >
             AI와 함께하는{" "}
+            <br className="sm:hidden" />
             <Text
               component="span"
               variant="gradient"
@@ -75,6 +76,7 @@ export default function Home() {
             fz={{ base: "md", sm: "lg" }}
             maw={500}
             lh={1.6}
+            px="md"
           >
             실시간 AI 평가와 맞춤형 피드백으로
             <br />
@@ -88,6 +90,8 @@ export default function Home() {
             radius="md"
             rightSection={<IconArrowRight size={20} />}
             mt="md"
+            fullWidth={false}
+            style={{ width: "fit-content" }}
           >
             시작하기
           </Button>
@@ -95,7 +99,7 @@ export default function Home() {
       </Container>
 
       {/* Features Section */}
-      <Container size="lg" pb={rem(120)}>
+      <Container size="lg" pb={{ base: rem(80), md: rem(120) }}>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xl">
           {features.map((feature) => (
             <Paper
@@ -103,12 +107,13 @@ export default function Home() {
               p="xl"
               radius="lg"
               withBorder
+              className="hover:shadow-md transition-shadow"
               style={{ borderColor: "var(--mantine-color-gray-2)" }}
             >
               <ThemeIcon size={48} radius="md" variant="light" mb="md">
                 <feature.icon size={24} />
               </ThemeIcon>
-              <Text fw={600} fz="lg" mb={rem(8)}>
+              <Text fw={700} fz="lg" mb={rem(8)}>
                 {feature.title}
               </Text>
               <Text c="dimmed" fz="sm" lh={1.6}>
@@ -126,12 +131,10 @@ export default function Home() {
         style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
       >
         <Container size="lg">
-          <Group justify="space-between">
-            <Group gap="xs">
-              <Text fw={600}>OPIc Helper</Text>
-            </Group>
-            <Text fz="sm" c="dimmed">
-              © 2025 OPIc Helper
+          <Group justify="space-between" align="center" gap="md">
+            <Text fw={700} fz="lg">OPIc Helper</Text>
+            <Text fz="xs" c="dimmed">
+              © 2025 OPIc Helper. All rights reserved.
             </Text>
           </Group>
         </Container>

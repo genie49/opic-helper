@@ -20,14 +20,14 @@ export default function PronunciationFeedback({ result }: PronunciationFeedbackP
   return (
     <div className="divide-y divide-slate-100">
       {/* Summary Section */}
-      <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-8 bg-slate-50/50">
-        <div className="flex items-center gap-6">
-          <div className={`flex items-center justify-center w-20 h-20 rounded-2xl ${grade.lightBg} ${grade.color} shadow-inner`}>
-            <span className="text-3xl font-black">{pronunciationScore}</span>
+      <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 bg-slate-50/50">
+        <div className="flex items-center gap-4 md:gap-6">
+          <div className={`flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl ${grade.lightBg} ${grade.color} shadow-inner`}>
+            <span className="text-2xl md:text-3xl font-black">{pronunciationScore}</span>
           </div>
           <div>
-            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">발음 정확도</h4>
-            <div className={`text-2xl font-black ${grade.color}`}>{grade.label}</div>
+            <h4 className="text-[10px] md:text-sm font-bold text-slate-400 uppercase tracking-widest">발음 정확도</h4>
+            <div className={`text-xl md:text-2xl font-black ${grade.color}`}>{grade.label}</div>
           </div>
         </div>
         
@@ -47,19 +47,19 @@ export default function PronunciationFeedback({ result }: PronunciationFeedbackP
       </div>
 
       {/* Transcription Text */}
-      <div className="p-8">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">인식된 스크립트</h4>
-        <div className="relative p-6 rounded-2xl bg-white border border-slate-100 shadow-sm leading-relaxed text-slate-700 text-lg italic">
+      <div className="p-6 md:p-8">
+        <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">인식된 스크립트</h4>
+        <div className="relative p-6 rounded-2xl bg-white border border-slate-100 shadow-sm leading-relaxed text-slate-700 text-base md:text-lg italic">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="absolute -top-3 -left-2 text-slate-100"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H16.017C14.9124 8 14.017 7.10457 14.017 6V5C14.017 3.89543 14.9124 3 16.017 3H19.017C21.2261 3 23.017 4.79086 23.017 7V15C23.017 18.866 19.883 22 16.017 22H14.017V21ZM1 15C1 18.866 4.13401 22 8 22H10V21L10 18C10 16.8954 9.10457 16 8 16H5C4.44772 16 4 15.5523 4 15V9C4 8.44772 4.44772 8 5 8H8C9.10457 8 10 7.10457 10 6V5C10 3.89543 9.10457 3 8 3H5C2.79086 3 1 4.79086 1 7V15Z"/></svg>
           {result.text}
         </div>
       </div>
 
       {/* Word Analysis */}
-      <div className="p-8">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center justify-between">
+      <div className="p-6 md:p-8">
+        <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center justify-between">
           <span>단어별 정밀 분석</span>
-          <span className="text-[10px] font-normal lowercase normal-case">단어를 클릭하여 세부 정보를 확인하세요</span>
+          <span className="text-[10px] font-normal lowercase normal-case hidden xs:inline">단어를 클릭하여 세부 정보 확인</span>
         </h4>
         <div className="flex flex-wrap gap-2">
           {result.words.map((word, index) => {
@@ -69,10 +69,10 @@ export default function PronunciationFeedback({ result }: PronunciationFeedbackP
             return (
               <div
                 key={index}
-                className={`group relative flex flex-col items-center p-3 px-4 rounded-xl border transition-all cursor-help hover:-translate-y-1 ${wordGrade.lightBg} ${wordGrade.borderColor} border-transparent hover:shadow-md`}
+                className={`group relative flex flex-col items-center p-2.5 px-3 md:p-3 md:px-4 rounded-xl border transition-all cursor-help hover:-translate-y-1 ${wordGrade.lightBg} ${wordGrade.borderColor} border-transparent hover:shadow-md`}
               >
-                <span className={`text-base font-bold ${wordGrade.color}`}>{word.word}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-1">{wordScore}%</span>
+                <span className={`text-sm md:text-base font-bold ${wordGrade.color}`}>{word.word}</span>
+                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium mt-0.5">{wordScore}%</span>
                 
                 {/* Tooltip on hover */}
                 <div className="absolute bottom-full mb-2 hidden group-hover:block w-32 bg-slate-900 text-white text-[10px] p-2 rounded shadow-xl z-20">

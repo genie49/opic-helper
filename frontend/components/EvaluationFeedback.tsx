@@ -37,11 +37,11 @@ export default function EvaluationFeedback({ result }: EvaluationFeedbackProps) 
     <div className="space-y-8">
       {/* Level Card */}
       <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-        <CardContent className="p-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
             <div className="text-center md:text-left">
-              <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2">AI 산출 등급</p>
-              <div className="text-6xl font-black tracking-tighter text-white">
+              <p className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-widest mb-2">AI 산출 등급</p>
+              <div className="text-5xl md:text-6xl font-black tracking-tighter text-white">
                 {result.evaluated_level}
               </div>
             </div>
@@ -166,18 +166,18 @@ export default function EvaluationFeedback({ result }: EvaluationFeedbackProps) 
 
       {/* Model Answer */}
       <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden bg-white">
-        <CardHeader className="bg-slate-900 text-white pb-4">
-          <CardTitle className="text-xl font-bold flex items-center gap-3">
+        <CardHeader className="bg-slate-900 text-white p-6">
+          <CardTitle className="text-lg md:text-xl font-bold flex items-center gap-3">
             <span className="p-1.5 bg-primary rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>
-            모범 답안 (Model Answer)
+            모범 답안
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-8 pb-10 px-8 bg-slate-50/30">
+        <CardContent className="p-6 md:p-10 bg-slate-50/30">
           <div className="relative">
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="absolute -top-4 -left-4 text-slate-100 -z-10"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H16.017C14.9124 8 14.017 7.10457 14.017 6V5C14.017 3.89543 14.9124 3 16.017 3H19.017C21.2261 3 23.017 4.79086 23.017 7V15C23.017 18.866 19.883 22 16.017 22H14.017V21ZM1 15C1 18.866 4.13401 22 8 22H10V21L10 18C10 16.8954 9.10457 16 8 16H5C4.44772 16 4 15.5523 4 15V9C4 8.44772 4.44772 8 5 8H8C9.10457 8 10 7.10457 10 6V5C10 3.89543 9.10457 3 8 3H5C2.79086 3 1 4.79086 1 7V15Z"/></svg>
-            <p className="text-lg text-slate-700 leading-relaxed italic relative z-10">
+            <p className="text-base md:text-lg text-slate-700 leading-relaxed italic relative z-10">
               {result.feedback.model_answer}
             </p>
           </div>

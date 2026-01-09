@@ -83,11 +83,11 @@ export default function HistoryPage() {
     try {
       setIsLoading(true);
 
-      const [feedbacksRes, dashboardRes] = await Promise.all([
+      const [dashboardRes] = await Promise.all([
         fetch("/api/dashboard"),
       ]);
 
-      if (dashboardRes.ok) {
+      if (dashboardRes && dashboardRes.ok) {
         const data = await dashboardRes.json();
         setStats(data.stats);
         setFeedbacks(data.recentFeedbacks.map((f: any) => ({
@@ -125,26 +125,44 @@ export default function HistoryPage() {
   return (
     <Stack gap="xl" pb={80}>
       {/* Header */}
-      <Group justify="space-between" align="flex-start" pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-        <Group gap="md">
-          <ThemeIcon size={48} radius="md" color="dark">
-            <IconHistory size={24} />
-          </ThemeIcon>
-          <Box>
-            <Title order={2} fw={800}>학습 히스토리</Title>
-            <Text c="dimmed">당신의 성장 궤적을 확인하고 취약점을 파악하세요.</Text>
-          </Box>
+      <Stack gap="md" pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+        <Group justify="space-between" align="center">
+          <Group gap="md">
+            <ThemeIcon size={48} radius="md" color="dark" visibleFrom="sm">
+              <IconHistory size={24} />
+            </ThemeIcon>
+            <ThemeIcon size={40} radius="md" color="dark" hiddenFrom="sm">
+              <IconHistory size={20} />
+            </ThemeIcon>
+            <Box>
+              <Title order={2} fw={800} fz={{ base: rem(20), sm: rem(24) }}>학습 히스토리</Title>
+              <Text c="dimmed" size="sm" visibleFrom="sm">당신의 성장 궤적을 확인하고 취약점을 파악하세요.</Text>
+            </Box>
+          </Group>
+          <SegmentedControl
+            visibleFrom="sm"
+            value={period}
+            onChange={setPeriod}
+            data={[
+              { label: "이번 주", value: "week" },
+              { label: "이번 달", value: "month" },
+              { label: "전체", value: "all" },
+            ]}
+          />
         </Group>
+        
         <SegmentedControl
+          hiddenFrom="sm"
+          fullWidth
           value={period}
           onChange={setPeriod}
           data={[
-            { label: "이번 주", value: "week" },
-            { label: "이번 달", value: "month" },
+            { label: "주", value: "week" },
+            { label: "월", value: "month" },
             { label: "전체", value: "all" },
           ]}
         />
-      </Group>
+      </Stack>
 
       {/* Stats Overview */}
       <SimpleGrid cols={{ base: 2, lg: 4 }} spacing="lg">
@@ -176,99 +194,108 @@ export default function HistoryPage() {
             feedbacks.map((feedback, i) => (
               <Box key={i}>
                 {i > 0 && <Divider />}
-                <Box
-                  p="xl"
-                  style={{ cursor: "pointer" }}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <Group gap="lg" align="flex-start">
-                    {/* Level Badge */}
-                    <Paper
-                      w={56}
-                      h={56}
-                      radius="lg"
-                      withBorder
-                      shadow="sm"
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Text fz="lg" fw={800} c="violet">{feedback.evaluatedLevel}</Text>
-                    </Paper>
+                  <Stack p={{ base: "lg", sm: "xl" }}>
+                    <Group gap="md" align="flex-start" wrap="nowrap">
+                      {/* Level Badge */}
+                      <Paper
+                        w={{ base: 44, sm: 56 }}
+                        h={{ base: 44, sm: 56 }}
+                        radius="lg"
+                        withBorder
+                        shadow="sm"
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                      >
+                        <Text fz={{ base: "md", sm: "lg" }} fw={800} c="violet">{feedback.evaluatedLevel}</Text>
+                      </Paper>
 
-                    {/* Content */}
-                    <Stack gap="sm" style={{ flex: 1 }}>
-                      <Group justify="space-between">
-                        <Title order={5} fw={700} lineClamp={1}>{feedback.questionText}</Title>
-                        <Text size="xs" c="dimmed" fs="italic">
-                          {new Date(feedback.createdAt).toLocaleDateString("ko-KR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </Text>
-                      </Group>
-
-                      <Group gap="xs">
-                        <Badge size="sm" variant="light" color="blue">발화 {feedback.scores.utterance}</Badge>
-                        <Badge size="sm" variant="light" color="green">문법 {feedback.scores.grammar}</Badge>
-                        <Badge size="sm" variant="light" color="yellow">어휘 {feedback.scores.vocabulary}</Badge>
-                        <Badge size="sm" variant="light" color="purple">구조 {feedback.scores.structure}</Badge>
-                        <Badge size="sm" variant="light" color="orange">발음 {feedback.scores.pronunciation}</Badge>
-                        <Box style={{ flex: 1 }} />
-                        <Group gap={4}>
-                          <Text fw={700}>{feedback.scores.utterance + feedback.scores.grammar + feedback.scores.vocabulary + feedback.scores.structure + feedback.scores.pronunciation}</Text>
-                          <Text size="xs" c="dimmed">/ 100</Text>
-                        </Group>
-                      </Group>
-
-                      {/* Quantitative Metrics */}
-                      {feedback.quantitativeMetrics && (
-                        <SimpleGrid cols={4} spacing="xs">
-                          <Paper p="xs" radius="md" bg="blue.0">
-                            <Text size="xs" c="dimmed">단어 수</Text>
-                            <Text fw={700} c="blue">{feedback.quantitativeMetrics.word_count}</Text>
-                          </Paper>
-                          <Paper p="xs" radius="md" bg="green.0">
-                            <Text size="xs" c="dimmed">TTR</Text>
-                            <Text fw={700} c="green">{(feedback.quantitativeMetrics.ttr * 100).toFixed(1)}%</Text>
-                          </Paper>
-                          <Paper p="xs" radius="md" bg="violet.0">
-                            <Text size="xs" c="dimmed">문장 수</Text>
-                            <Text fw={700} c="violet">{feedback.quantitativeMetrics.sentence_count}</Text>
-                          </Paper>
-                          <Paper p="xs" radius="md" bg="yellow.0">
-                            <Text size="xs" c="dimmed">접속사</Text>
-                            <Text fw={700} c="yellow">{feedback.quantitativeMetrics.connector_count}</Text>
-                          </Paper>
-                        </SimpleGrid>
-                      )}
-
-                      {/* AI Feedback Summary */}
-                      <Paper p="md" radius="md" bg="gray.0" withBorder>
-                        <Group gap="xs" align="flex-start">
-                          <Badge size="xs" color="violet" variant="filled">AI FEEDBACK</Badge>
-                          <Text size="sm" style={{ flex: 1 }}>
-                            {feedback.feedback.strengths[0] || feedback.feedback.weaknesses[0] || feedback.feedback.improvements[0]}
+                      {/* Content */}
+                      <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
+                        <Group justify="space-between" wrap="nowrap">
+                          <Title order={5} fw={700} lineClamp={1} fz={{ base: "sm", sm: "md" }}>{feedback.questionText}</Title>
+                          <Text size="xs" c="dimmed" fs="italic" visibleFrom="sm">
+                            {new Date(feedback.createdAt).toLocaleDateString("ko-KR", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
                           </Text>
                         </Group>
-                      </Paper>
-                    </Stack>
 
-                    {/* Actions */}
-                    <Stack gap="xs" align="center">
-                      <Button variant="subtle" size="xs">상세 리포트</Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        radius="xl"
-                        w={40}
-                        h={40}
-                        p={0}
-                      >
-                        <IconArrowRight size={16} />
-                      </Button>
-                    </Stack>
-                  </Group>
-                </Box>
+                        <Group gap={4} style={{ flexWrap: "wrap" }}>
+                          <Badge size="xs" variant="light" color="blue">발화 {feedback.scores.utterance}</Badge>
+                          <Badge size="xs" variant="light" color="green">문법 {feedback.scores.grammar}</Badge>
+                          <Badge size="xs" variant="light" color="yellow">어휘 {feedback.scores.vocabulary}</Badge>
+                          <Badge size="xs" variant="light" color="purple">구조 {feedback.scores.structure}</Badge>
+                          <Badge size="xs" variant="light" color="orange">발음 {feedback.scores.pronunciation}</Badge>
+                          
+                          <Group gap={4} ml="auto">
+                            <Text fw={700} fz="sm">{feedback.scores.utterance + feedback.scores.grammar + feedback.scores.vocabulary + feedback.scores.structure + feedback.scores.pronunciation}</Text>
+                            <Text size="xs" c="dimmed" visibleFrom="xs">/ 100</Text>
+                          </Group>
+                        </Group>
+
+                        {/* Quantitative Metrics - Hidden on very small screens or made single column */}
+                        {feedback.quantitativeMetrics && (
+                          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                            <Paper p="xs" radius="md" bg="blue.0">
+                              <Text size="xs" c="dimmed">단어</Text>
+                              <Text fw={700} c="blue" fz="xs">{feedback.quantitativeMetrics.word_count}</Text>
+                            </Paper>
+                            <Paper p="xs" radius="md" bg="green.0">
+                              <Text size="xs" c="dimmed">TTR</Text>
+                              <Text fw={700} c="green" fz="xs">{(feedback.quantitativeMetrics.ttr * 100).toFixed(0)}%</Text>
+                            </Paper>
+                            <Paper p="xs" radius="md" bg="violet.0">
+                              <Text size="xs" c="dimmed">문장</Text>
+                              <Text fw={700} c="violet" fz="xs">{feedback.quantitativeMetrics.sentence_count}</Text>
+                            </Paper>
+                            <Paper p="xs" radius="md" bg="yellow.0">
+                              <Text size="xs" c="dimmed">접속사</Text>
+                              <Text fw={700} c="yellow" fz="xs">{feedback.quantitativeMetrics.connector_count}</Text>
+                            </Paper>
+                          </SimpleGrid>
+                        )}
+
+                        {/* AI Feedback Summary */}
+                        <Paper p="sm" radius="md" bg="gray.0" withBorder visibleFrom="xs">
+                          <Group gap="xs" align="flex-start" wrap="nowrap">
+                            <Badge size="xs" color="violet" variant="filled" style={{ flexShrink: 0 }}>AI FEEDBACK</Badge>
+                            <Text size="xs" lineClamp={1} style={{ flex: 1 }}>
+                              {feedback.feedback.strengths[0] || feedback.feedback.weaknesses[0] || feedback.feedback.improvements[0]}
+                            </Text>
+                          </Group>
+                        </Paper>
+                      </Stack>
+
+                      {/* Small arrow for mobile */}
+                      <Center hiddenFrom="sm">
+                        <IconArrowRight size={16} className="text-gray-400" />
+                      </Center>
+
+                      {/* Desktop Actions */}
+                      <Stack gap="xs" align="center" visibleFrom="sm" style={{ flexShrink: 0 }}>
+                        <Button variant="subtle" size="xs">상세 리포트</Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          radius="xl"
+                          w={40}
+                          h={40}
+                          p={0}
+                        >
+                          <IconArrowRight size={16} />
+                        </Button>
+                      </Stack>
+                    </Group>
+                    
+                    {/* Date for mobile */}
+                    <Text size="xs" c="dimmed" fs="italic" hiddenFrom="sm" ta="right">
+                      {new Date(feedback.createdAt).toLocaleDateString("ko-KR", {
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </Text>
+                  </Stack>
               </Box>
             ))
           ) : (

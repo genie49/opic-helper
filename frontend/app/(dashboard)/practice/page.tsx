@@ -314,55 +314,94 @@ export default function PracticePage() {
     <Stack gap="xl" pb={80}>
       {/* Header */}
       <Box pb="md" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-        <Group justify="space-between" align="flex-start" mb="lg">
-          <Group gap="md">
-            <ThemeIcon size={48} radius="md" variant="light">
-              <IconMicrophone size={24} />
-            </ThemeIcon>
-            <Box>
-              <Title order={2} fw={800}>무한 연습</Title>
-              <Text c="dimmed">AI가 추천하는 맞춤형 문제로 실전 감각을 익히세요.</Text>
-            </Box>
-          </Group>
-          <Group gap="sm">
-            {/* 실시간 레벨 표시 */}
-            <Paper px="md" py="xs" radius="md" withBorder bg="violet.0">
-              <Group gap="xs">
-                <IconRobot size={18} color="var(--mantine-color-violet-6)" />
-                <Box>
-                  <Text size="xs" c="dimmed" fw={600}>AI 평가 레벨</Text>
-                  <Text size="lg" fw={900} c="violet" lh={1}>
-                    {userLevel.assessedLevel || "-"}
+        <Stack gap="lg" mb="lg">
+          <Group justify="space-between" align="center">
+            <Group gap="md">
+              <ThemeIcon size={48} radius="md" variant="light" visibleFrom="sm">
+                <IconMicrophone size={24} />
+              </ThemeIcon>
+              <ThemeIcon size={40} radius="md" variant="light" hiddenFrom="sm">
+                <IconMicrophone size={20} />
+              </ThemeIcon>
+              <Box>
+                <Title order={2} fw={800} fz={{ base: rem(20), sm: rem(24) }}>무한 연습</Title>
+                <Text c="dimmed" size="sm" visibleFrom="sm">AI가 추천하는 맞춤형 문제로 실전 감각을 익히세요.</Text>
+              </Box>
+            </Group>
+            
+            {/* Desktop Buttons */}
+            <Group gap="sm" visibleFrom="sm">
+              <Paper px="md" py="xs" radius="md" withBorder bg="violet.0">
+                <Group gap="xs">
+                  <IconRobot size={18} color="var(--mantine-color-violet-6)" />
+                  <Box>
+                    <Text size="xs" c="dimmed" fw={600}>AI 평가 레벨</Text>
+                    <Text size="lg" fw={900} c="violet" lh={1}>
+                      {userLevel.assessedLevel || "-"}
+                    </Text>
+                  </Box>
+                  <Text size="xs" c="dimmed" ml="xs">
+                    → {userLevel.targetLevelCode}
                   </Text>
-                </Box>
-                <Text size="xs" c="dimmed" ml="xs">
-                  → {userLevel.targetLevelCode}
-                </Text>
-              </Group>
-            </Paper>
+                </Group>
+              </Paper>
+              <Button
+                variant="outline"
+                size="md"
+                leftSection={<IconPlayerSkipForward size={18} />}
+                onClick={handleSkipQuestion}
+              >
+                건너뛰기
+              </Button>
+              <Button
+                size="md"
+                rightSection={<IconArrowRight size={18} />}
+                onClick={handleNextQuestion}
+                disabled={!showFeedback}
+              >
+                다음 문제
+              </Button>
+            </Group>
+          </Group>
+
+          {/* Mobile Info & Buttons */}
+          <Stack gap="sm" hiddenFrom="sm">
+            <Group justify="space-between">
+              <Paper px="sm" py={rem(6)} radius="md" withBorder bg="violet.0" style={{ flex: 1 }}>
+                <Group gap="xs" justify="center">
+                  <IconRobot size={14} color="var(--mantine-color-violet-6)" />
+                  <Text size="xs" fw={700} c="violet">
+                    Lv.{userLevel.assessedLevel || "-"} → {userLevel.targetLevelCode}
+                  </Text>
+                </Group>
+              </Paper>
+              <Button
+                variant="outline"
+                size="sm"
+                style={{ flex: 1 }}
+                leftSection={<IconPlayerSkipForward size={14} />}
+                onClick={handleSkipQuestion}
+              >
+                건너뛰기
+              </Button>
+            </Group>
             <Button
-              variant="outline"
+              fullWidth
               size="md"
-              leftSection={<IconPlayerSkipForward size={18} />}
-              onClick={handleSkipQuestion}
-            >
-              건너뛰기
-            </Button>
-            <Button
-              size="md"
-              rightSection={<IconArrowRight size={18} />}
+              rightSection={<IconArrowRight size={16} />}
               onClick={handleNextQuestion}
               disabled={!showFeedback}
             >
               다음 문제
             </Button>
-          </Group>
-        </Group>
+          </Stack>
+        </Stack>
 
-        {/* 문제 유형 필터 */}
-        <Group gap="xs">
-          <IconFilter size={16} color="var(--mantine-color-dimmed)" />
-          <Text size="sm" fw={600} c="dimmed">문제 유형:</Text>
+        <Group gap="xs" style={{ flexWrap: "wrap" }}>
+          <Group gap={4}>
+            <IconFilter size={16} color="var(--mantine-color-dimmed)" />
+            <Text size="sm" fw={600} c="dimmed">유형:</Text>
+          </Group>
           {QUESTION_TYPES.map((type) => (
             <Button
               key={type.value}
@@ -383,8 +422,9 @@ export default function PracticePage() {
             leftSection={<IconRobot size={14} />}
             onClick={handleGenerateQuestion}
             disabled={isLoadingQuestion}
+            ml={{ sm: "auto" }}
           >
-            AI 문제 생성
+            AI 생성
           </Button>
         </Group>
       </Box>
@@ -499,12 +539,12 @@ export default function PracticePage() {
                   <Blockquote
                     color="violet"
                     iconSize={0}
-                    p="lg"
+                    p={{ base: "md", sm: "lg" }}
                     styles={{
                       root: { backgroundColor: "var(--mantine-color-gray-0)" },
                     }}
                   >
-                    <Text size="xl" fw={500} style={{ lineHeight: 1.8 }}>
+                    <Text size="lg" fw={500} fz={{ base: rem(16), sm: rem(18), md: rem(20) }} style={{ lineHeight: 1.6 }}>
                       {question.questionText}
                     </Text>
                   </Blockquote>

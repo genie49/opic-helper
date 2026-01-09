@@ -155,7 +155,7 @@ export default function DashboardPage() {
           </Stack>
           <Skeleton height={42} width={140} radius="md" />
         </Group>
-        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
           <Skeleton height={200} radius="md" />
           <Skeleton height={200} radius="md" />
           <Skeleton height={200} radius="md" />
@@ -170,26 +170,49 @@ export default function DashboardPage() {
   return (
     <Stack gap="xl">
       {/* Header */}
-      <Group justify="space-between" align="flex-start">
-        <Box>
-          <Title order={1} fw={800}>대시보드</Title>
-          <Text size="lg" c="dimmed" mt={4}>
+      <Stack gap="md">
+        <Group justify="space-between" align="center">
+          <Box>
+            <Title order={1} fw={800} fz={{ base: rem(28), sm: rem(34) }}>대시보드</Title>
+            <Text size="md" c="dimmed" mt={4} visibleFrom="sm">
+              {user ? (
+                <>반가워요, <Text span fw={600} c="dark">{user.displayName}</Text>님! 오늘도 목표 등급을 향해 달려볼까요?</>
+              ) : (
+                "OPIc 학습 진행 상황을 확인하세요"
+              )}
+            </Text>
+          </Box>
+          <Button
+            size="md"
+            radius="md"
+            rightSection={<IconPlayerPlay size={18} />}
+            onClick={() => router.push("/practice")}
+            visibleFrom="sm"
+          >
+            연습 시작하기
+          </Button>
+        </Group>
+        
+        {/* Mobile Header Text and Button */}
+        <Box hiddenFrom="sm">
+          <Text size="sm" c="dimmed" mb="md">
             {user ? (
-              <>반가워요, <Text span fw={600} c="dark">{user.displayName}</Text>님! 오늘도 목표 등급을 향해 달려볼까요?</>
+              <>반가워요, <Text span fw={600} c="dark">{user.displayName}</Text>님!</>
             ) : (
-              "OPIc 학습 진행 상황을 확인하세요"
+              "OPIc 학습 진행 상황"
             )}
           </Text>
+          <Button
+            fullWidth
+            size="lg"
+            radius="md"
+            rightSection={<IconPlayerPlay size={18} />}
+            onClick={() => router.push("/practice")}
+          >
+            연습 시작하기
+          </Button>
         </Box>
-        <Button
-          size="lg"
-          radius="md"
-          rightSection={<IconPlayerPlay size={18} />}
-          onClick={() => router.push("/practice")}
-        >
-          연습 시작하기
-        </Button>
-      </Group>
+      </Stack>
 
       {/* Level & Stats Grid */}
       <SimpleGrid cols={{ base: 1, lg: 3 }} spacing="lg">
@@ -206,14 +229,16 @@ export default function DashboardPage() {
           >
             <Stack align="center" gap="md">
               <Text size="sm" fw={500} style={{ opacity: 0.8 }}>AI 평가 레벨</Text>
-              <Title order={1} fz={72} fw={900} lh={1}>
+              <Title order={1} fz={{ base: 60, sm: 72 }} fw={900} lh={1}>
                 {user.assessedLevel || "-"}
               </Title>
               <Badge
                 size="lg"
                 variant="light"
                 color="white"
-                style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                styles={{
+                  root: { backgroundColor: "rgba(255,255,255,0.2)", color: "white" }
+                }}
               >
                 {user.assessedLevel ? "AI 평가 완료" : "아직 평가 전"}
               </Badge>
@@ -411,7 +436,10 @@ export default function DashboardPage() {
                   ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9]}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => LEVEL_ORDER[value] || ""}
+                  tickFormatter={(value) => {
+                    const level = Object.entries(LEVEL_ORDER).find(([_, v]) => v === value);
+                    return level ? level[0] : "";
+                  }}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -575,40 +603,40 @@ export default function DashboardPage() {
               <Box key={feedback.id}>
                 {index > 0 && <Divider />}
                 <Group
-                  gap="lg"
+                  gap="md"
                   p="lg"
+                  wrap="nowrap"
                   style={{ cursor: "pointer" }}
                   className="hover:bg-gray-50 transition-colors"
                   onClick={() => router.push(`/history/${feedback.id}`)}
                 >
                   <Paper
-                    w={48}
-                    h={48}
+                    w={{ base: 40, sm: 48 }}
+                    h={{ base: 40, sm: 48 }}
                     radius="lg"
                     withBorder
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                   >
-                    <Text fw={700} c="violet">{feedback.evaluatedLevel}</Text>
+                    <Text fw={700} c="violet" fz={{ base: "sm", sm: "md" }}>{feedback.evaluatedLevel}</Text>
                   </Paper>
                   <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={600} lineClamp={1}>{feedback.questionText}</Text>
-                    <Text size="sm" c="dimmed">
+                    <Text fw={600} lineClamp={1} fz={{ base: "sm", sm: "md" }}>{feedback.questionText}</Text>
+                    <Text size="xs" c="dimmed">
                       {new Date(feedback.createdAt).toLocaleDateString("ko-KR", {
-                        year: "numeric",
                         month: "long",
                         day: "numeric",
                       })}
                     </Text>
                   </Box>
-                  <Stack gap={4} align="flex-end">
+                  <Stack gap={2} align="flex-end" style={{ flexShrink: 0 }}>
                     <Group gap={4}>
-                      <Text fz="lg" fw={700}>{feedback.totalScore}</Text>
-                      <Text size="xs" c="dimmed">/ 100</Text>
+                      <Text fz={{ base: "md", sm: "lg" }} fw={700}>{feedback.totalScore}</Text>
+                      <Text size="xs" c="dimmed" style={{ display: "flex" }} visibleFrom="xs">/ 100</Text>
                     </Group>
                     <Progress
                       value={feedback.totalScore}
-                      size="sm"
-                      w={80}
+                      size="xs"
+                      w={{ base: 40, sm: 60, md: 80 }}
                       color={feedback.totalScore >= 80 ? "green" : feedback.totalScore >= 60 ? "yellow" : "red"}
                     />
                   </Stack>
