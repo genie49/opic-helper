@@ -16,7 +16,8 @@
 | Next.js API Routes | ✅ 완료 | `/app/api/` 모든 엔드포인트 구현 완료 |
 | Whisper STT | ✅ 완료 | WebGPU 기반 음성 인식 서비스 구현 완료 |
 | Frontend 기능 연동 | ✅ 완료 | API 연동, Mock 평가 작동 |
-| FastAPI Backend | ⏸️ 연기 | 나중에 구현 |
+| FastAPI Backend | ✅ 완료 | LangChain 기반 AI 평가/롤플레이 구현 |
+| Frontend ↔ Backend 연동 | ✅ 완료 | SSE 클라이언트, AI 평가 연동 |
 
 ---
 
@@ -27,7 +28,9 @@
 2. ✅ Whisper WebGPU로 클라이언트 사이드 STT 구현
 3. ✅ Practice 페이지 완전한 기능 구현 (Mock 평가로)
 4. ✅ Dashboard 페이지 실제 데이터 표시
-5. ⏳ 백엔드 연동 포인트 준비
+5. ✅ 백엔드 연동 포인트 준비
+6. ✅ FastAPI + LangChain AI 평가 구현
+7. ✅ Frontend ↔ Backend SSE 연동
 
 ---
 
@@ -313,32 +316,46 @@ interface MockEvaluation {
 
 ### 단계 4: 백엔드 준비
 - [x] Mock 평가 서비스 작동
-- [ ] SSE 클라이언트 구조 준비 (FastAPI 연동 시 구현)
-- [ ] FastAPI 연동 포인트 명확히 정의
+- [x] SSE 클라이언트 구조 준비 (`/lib/api/sseClient.ts`)
+- [x] FastAPI 연동 포인트 정의 및 구현
+
+### 단계 5: FastAPI + LangChain AI 구현 ✅
+- [x] FastAPI 서버 구조 설정 (`/backend/`)
+- [x] LangChain 기반 평가 에이전트 (`/app/agents/evaluation_agent.py`)
+- [x] LangChain 기반 롤플레이 에이전트 (`/app/agents/roleplay_agent.py`)
+- [x] SSE 스트리밍 평가 엔드포인트 (`/api/evaluate`)
+- [x] SSE 롤플레이 엔드포인트 (`/api/roleplay/*`)
+- [x] Supabase JWT 인증 미들웨어
+
+### 단계 6: Frontend ↔ Backend 연동 ✅
+- [x] AI 평가 서비스 구현 (`/lib/services/aiEvaluation.ts`)
+- [x] Practice 페이지 AI 평가 연동 (진행률 표시 포함)
+- [x] Roleplay 페이지 AI 평가 연동 (진행률 표시 포함)
+- [x] 환경변수 설정 (`NEXT_PUBLIC_USE_AI_EVALUATION`)
+- [x] AI 미설정시 Mock 평가 fallback
 
 ---
 
-## 🚀 다음 단계 (이후)
+## 🚀 다음 단계
 
-이 계획 완료 후:
-
-### FastAPI 구현
-1. `/api/evaluate` - 답변 평가 (SSE)
-2. `/api/roleplay/*` - 롤플레이 기능
-3. Mock → 실제 Grok LLM으로 교체
+### 즉시 가능
+1. **롤플레이 AI 대화** - AI가 실제 대화 상대역할 수행
+2. **프로필 페이지** - 사용자 현재/목표 레벨 설정
+3. **배포** - Vercel(Frontend) + Railway(Backend) 배포
 
 ### 고급 기능
 1. 가중치 기반 문제 출제 로직 최적화
-2. 롤플레이 페이지 구현
-3. 실시간 SSE 연동
+2. 사용자별 학습 분석 대시보드
+3. 음성 합성(TTS) 추가
 
 ---
 
 ## 🤔 결정 필요 사항
 
-1. **Mock 평가 로직:** 랜덤 점수 대신 규칙 기반 점수 생성?
-2. **Practice 페이지:** 롤플레이 문제도 Mock으로 구현할지?
+1. ~~**Mock 평가 로직:** 랜덤 점수 대신 규칙 기반 점수 생성?~~ → AI 평가로 해결
+2. ~~**Practice 페이지:** 롤플레이 문제도 Mock으로 구현할지?~~ → AI 연동 완료
 3. **테스트 방식:** Jest + React Testing Library로 테스트 작성할지?
+4. **배포 방식:** Vercel + Railway vs Docker Compose?
 
 ---
 
