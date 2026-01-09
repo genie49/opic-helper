@@ -6,7 +6,7 @@ Handles AI evaluation and roleplay with SSE streaming.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health
+from app.api import health, evaluate, roleplay
 from app.core.config import settings
 
 app = FastAPI(
@@ -26,11 +26,8 @@ app.add_middleware(
 
 # Register routers
 app.include_router(health.router, prefix="/api", tags=["health"])
-
-# TODO: Add other routers
-# app.include_router(evaluate.router, prefix="/api", tags=["evaluate"])
-# app.include_router(roleplay.router, prefix="/api", tags=["roleplay"])
-# app.include_router(generate.router, prefix="/api", tags=["generate"])
+app.include_router(evaluate.router, prefix="/api", tags=["evaluate"])
+app.include_router(roleplay.router, prefix="/api", tags=["roleplay"])
 
 
 @app.get("/")
