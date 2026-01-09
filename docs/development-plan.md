@@ -1,8 +1,11 @@
-# 📋 OPIc Helper 개발 계획 (FastAPI 제외)
+# 📋 OPIc Helper 개발 계획
 
-**버전:** v1.0
+> ⚠️ **이 문서는 더 이상 사용되지 않습니다.**
+> 최신 진행 현황은 [00-progress-summary.md](./00-progress-summary.md)를 참조하세요.
+
+**버전:** v1.0 (Archived)
 **작성일:** 2026-01-06
-**상태:** Execute Mode
+**상태:** ✅ Completed
 
 ---
 

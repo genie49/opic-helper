@@ -1,5 +1,7 @@
 # 학습 시스템 재설계
 
+> ⚠️ **구현 진행 현황은 [00-progress-summary.md](./00-progress-summary.md)를 참조하세요.**
+
 > 2025년 1월 기준 OPIc 실제 시험 구조 조사를 바탕으로 한 시스템 재설계 문서
 
 ## 1. 배경: 실제 OPIc 시험 구조
@@ -481,25 +483,25 @@ interface DetailedEvaluation {
 
 ## 6. 구현 계획
 
-### Phase 1: 기반 정리
-- [ ] `difficultyLevel` 필터 제거 (question API)
-- [ ] 시드 데이터 확장 (주제당 여러 문제)
-- [ ] 기존 practice 페이지 정상화
+### Phase 1: 기반 정리 ✅ 완료
+- [x] `difficultyLevel` 필터 제거 (question API)
+- [x] 시드 데이터 확장 (67개 종합 OPIc 문제)
+- [x] 기존 practice 페이지 정상화
 
-### Phase 2: 레벨 추적 시스템
-- [ ] userProfiles에 `assessedLevel`, `lastAssessedAt` 추가
-- [ ] `currentLevelId` 제거 (또는 deprecated)
-- [ ] 무한 연습 시 매 문제마다 레벨 재계산
+### Phase 2: 레벨 추적 시스템 (부분 완료)
+- [x] userProfiles에 `assessedLevel`, `lastAssessedAt` 추가
+- [x] `currentLevelId` 제거 (또는 deprecated)
+- [x] 프로필 페이지에서 자기 평가 레벨 UI 제거 (읽기전용 표시)
+- [ ] 무한 연습 시 매 문제마다 레벨 재계산 (가중 평균)
 - [ ] 가중 평균 알고리즘 구현
-- [ ] 프로필 페이지에서 자기 평가 레벨 UI 제거
-
-### Phase 3: 무한 연습 개선
-- [ ] 문제 유형 필터 추가
-- [ ] roleplay를 practice에 통합
-- [ ] 실시간 레벨 표시
 - [ ] 대시보드에 레벨 추이 차트
 
-### Phase 4: 모의고사 모드
+### Phase 3: 무한 연습 개선 ✅ 완료
+- [x] 문제 유형 필터 추가
+- [x] roleplay를 practice에 통합 (별도 페이지 제거)
+- [x] 실시간 레벨 표시 (AI 평가 결과)
+
+### Phase 4: 모의고사 모드 (예정)
 - [ ] `/mock-test` 페이지 생성
 - [ ] 시험 세션 관리 (12-15문제 세트)
 - [ ] 40분 타이머
