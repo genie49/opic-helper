@@ -84,7 +84,7 @@ export const questions = pgTable(
       .notNull()
       .references(() => questionTopics.id),
     questionType: varchar("question_type", { length: 50 }).notNull(),
-    difficultyLevel: varchar("difficulty_level", { length: 10 }).notNull(),
+    difficultyLevel: varchar("difficulty_level", { length: 10 }), // nullable - OPIc 문제는 난이도와 무관
     questionText: text("question_text").notNull(),
     expectedAnswerStructure: text("expected_answer_structure"),
     keyVocabulary: text("key_vocabulary").array(),
