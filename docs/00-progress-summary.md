@@ -112,6 +112,18 @@
 | API 구현 | /api/generate-question (백엔드 + 프론트엔드 프록시) |
 | UI | 연습 페이지에 "AI 문제 생성" 버튼 추가 |
 
+#### Phase 4: 테스트 작성 (높음+중간 완료)
+
+| 항목 | 설명 |
+|------|------|
+| 백엔드 테스트 환경 | pytest, pytest-asyncio, pytest-mock, pytest-cov (70% 목표) |
+| 백엔드 Agent 테스트 | evaluation_agent, question_generation_agent 모델 및 함수 검증 |
+| 백엔드 API 테스트 | evaluate, generate_question 엔드포인트 테스트 |
+| 프론트엔드 Phase 3 API | exam (start, submit, complete), achievement, generate-question 테스트 |
+| 프론트엔드 기존 API | dashboard, mastery, levels API 테스트 |
+| 프론트엔드 컴포넌트 | VoiceRecorder, EvaluationFeedback 컴포넌트 테스트 |
+| 테스트 커버리지 | 높음+중간 우선순위 기능 모두 테스트 작성 완료 |
+
 ---
 
 ## 진행 중 / 예정된 작업
@@ -134,12 +146,12 @@
 
 ### Phase 4: 배포 및 품질
 
-| 항목 | 우선순위 | 설명 |
+| 항목 | 우선순위 | 상태 |
 |------|----------|------|
-| Vercel 배포 (Frontend) | 높음 | Next.js 프론트엔드 |
-| Railway 배포 (Backend) | 높음 | FastAPI 백엔드 |
-| 테스트 작성 | 중간 | Jest + React Testing Library |
-| 모바일 반응형 | 낮음 | UX 개선 |
+| Vercel 배포 (Frontend) | 높음 | ⏳ 예정 |
+| Railway 배포 (Backend) | 높음 | ⏳ 예정 |
+| 테스트 작성 | 중간 | ✅ 완료 (높음+중간) |
+| 모바일 반응형 | 낮음 | ⏳ 예정 |
 
 ---
 
