@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Container,
@@ -14,22 +16,25 @@ import {
 } from "@mantine/core";
 import {
   IconArrowRight,
+  IconMicrophone,
+  IconBrain,
+  IconChartLine,
 } from "@tabler/icons-react";
 import Image from "next/image";
 
 const features = [
   {
-    image: "/icons/feature-roleplay.png",
+    icon: IconMicrophone,
     title: "실시간 음성 연습",
     description: "마이크로 직접 답변하고 AI가 즉시 피드백을 제공합니다.",
   },
   {
-    image: "/icons/feature-recommendation.png",
+    icon: IconBrain,
     title: "AI 맞춤 학습",
     description: "취약점을 분석해 당신에게 필요한 문제를 추천합니다.",
   },
   {
-    image: "/icons/feature-evaluation.png",
+    icon: IconChartLine,
     title: "성장 트래킹",
     description: "학습 진도와 점수 변화를 한눈에 확인하세요.",
   },
@@ -100,15 +105,9 @@ export default function Home() {
               withBorder
               style={{ borderColor: "var(--mantine-color-gray-2)" }}
             >
-              <Box mb="md">
-                <Image
-                  src={feature.image}
-                  alt={feature.title}
-                  width={48}
-                  height={48}
-                  className="object-contain"
-                />
-              </Box>
+              <ThemeIcon size={48} radius="md" variant="light" mb="md">
+                <feature.icon size={24} />
+              </ThemeIcon>
               <Text fw={600} fz="lg" mb={rem(8)}>
                 {feature.title}
               </Text>
@@ -129,14 +128,6 @@ export default function Home() {
         <Container size="lg">
           <Group justify="space-between">
             <Group gap="xs">
-              <Box
-                w={24}
-                h={24}
-                bg="blue"
-                style={{ borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                <Text c="white" fw={700} fz="xs">O</Text>
-              </Box>
               <Text fw={600}>OPIc Helper</Text>
             </Group>
             <Text fz="sm" c="dimmed">

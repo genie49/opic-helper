@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ProfileMenu } from "./ProfileMenu";
 import { createClient } from "@/lib/supabase/server";
 
+import Image from "next/image";
+
 export async function Header() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -12,9 +14,6 @@ export async function Header() {
       <div className="container flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto">
         <div className="mr-8 flex items-center">
           <Link href="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-lg transform transition-transform group-hover:scale-105">
-              O
-            </div>
             <span className="font-bold text-xl tracking-tight hidden sm:inline-block">OPIc Helper</span>
           </Link>
         </div>
