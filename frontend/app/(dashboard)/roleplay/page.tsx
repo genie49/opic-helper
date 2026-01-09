@@ -37,7 +37,7 @@ import {
   IconUser,
   IconRobot,
   IconPlayerPlay,
-  IconShuffle,
+  IconArrowsShuffle,
 } from "@tabler/icons-react";
 
 interface RoleplayContext {
@@ -558,7 +558,7 @@ export default function RoleplayPage() {
                     <Button
                       size="lg"
                       variant="outline"
-                      leftSection={<IconShuffle size={20} />}
+                      leftSection={<IconArrowsShuffle size={20} />}
                       onClick={handleNextQuestion}
                       h={56}
                     >

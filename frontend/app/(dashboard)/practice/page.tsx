@@ -26,6 +26,8 @@ import {
   Grid,
   Blockquote,
   rem,
+  SegmentedControl,
+  Textarea,
 } from "@mantine/core";
 import {
   IconMicrophone,
@@ -37,6 +39,7 @@ import {
   IconStar,
   IconClock,
   IconTarget,
+  IconKeyboard,
 } from "@tabler/icons-react";
 
 interface DashboardStats {
@@ -55,6 +58,8 @@ export default function PracticePage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
+  const [textInput, setTextInput] = useState("");
 
   useEffect(() => {
     loadDashboardStats();
@@ -138,6 +143,7 @@ export default function PracticePage() {
     setTranscriptionResult(null);
     setShowFeedback(false);
     setEvaluationResult(null);
+    setTextInput("");
     loadQuestion();
   };
 
@@ -145,7 +151,28 @@ export default function PracticePage() {
     setTranscriptionResult(null);
     setShowFeedback(false);
     setEvaluationResult(null);
+    setTextInput("");
     loadQuestion();
+  };
+
+  const handleTextSubmit = () => {
+    if (!textInput.trim()) return;
+
+    const words = textInput.trim().split(/\s+/);
+    const wordTimestamps = words.map((word, index) => ({
+      word,
+      timestamp: [index * 0.5, (index + 1) * 0.5] as [number, number],
+      confidence: 1.0,
+    }));
+
+    const result: TranscriptionResult = {
+      text: textInput.trim(),
+      words: wordTimestamps,
+      avgConfidence: 1.0,
+      lowConfidenceWords: [],
+    };
+
+    handleTranscriptionComplete(result);
   };
 
   if (isLoadingQuestion) {
@@ -320,15 +347,77 @@ export default function PracticePage() {
               </Box>
             </Card>
 
-            {/* Voice Recorder Card */}
+            {/* Answer Input Card */}
             <Card shadow="md" radius="lg" padding={0} withBorder>
-              <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-                <Title order={4} fw={700}>답변 녹음</Title>
-                <Text size="sm" c="dimmed">버튼을 클릭하여 답변을 시작하세요. (최대 2분)</Text>
+              <Group justify="space-between" p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+                <Box>
+                  <Title order={4} fw={700}>답변 입력</Title>
+                  <Text size="sm" c="dimmed">
+                    {inputMode === "voice"
+                      ? "버튼을 클릭하여 답변을 시작하세요. (최대 2분)"
+                      : "영어로 답변을 작성하고 제출하세요."}
+                  </Text>
+                </Box>
+                <SegmentedControl
+                  value={inputMode}
+                  onChange={(value) => setInputMode(value as "voice" | "text")}
+                  data={[
+                    {
+                      value: "voice",
+                      label: (
+                        <Center style={{ gap: 8 }}>
+                          <IconMicrophone size={16} />
+                          <span>음성</span>
+                        </Center>
+                      ),
+                    },
+                    {
+                      value: "text",
+                      label: (
+                        <Center style={{ gap: 8 }}>
+                          <IconKeyboard size={16} />
+                          <span>텍스트</span>
+                        </Center>
+                      ),
+                    },
+                  ]}
+                />
+              </Group>
+              <Box py={48} px="lg">
+                {inputMode === "voice" ? (
+                  <Center>
+                    <VoiceRecorder onTranscriptionComplete={handleTranscriptionComplete} />
+                  </Center>
+                ) : (
+                  <Stack gap="md">
+                    <Textarea
+                      placeholder="Write your answer in English..."
+                      minRows={5}
+                      maxRows={10}
+                      autosize
+                      size="md"
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.currentTarget.value)}
+                      styles={{
+                        input: {
+                          fontSize: rem(16),
+                          lineHeight: 1.8,
+                        },
+                      }}
+                    />
+                    <Group justify="flex-end">
+                      <Button
+                        size="md"
+                        rightSection={<IconArrowRight size={18} />}
+                        onClick={handleTextSubmit}
+                        disabled={!textInput.trim()}
+                      >
+                        제출하기
+                      </Button>
+                    </Group>
+                  </Stack>
+                )}
               </Box>
-              <Center py={48} px="lg">
-                <VoiceRecorder onTranscriptionComplete={handleTranscriptionComplete} />
-              </Center>
             </Card>
 
             {/* Feedback Section */}

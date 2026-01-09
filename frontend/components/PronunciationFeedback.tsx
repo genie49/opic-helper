@@ -9,10 +9,10 @@ export default function PronunciationFeedback({ result }: PronunciationFeedbackP
   const pronunciationScore = Math.round(result.avgConfidence * 100);
 
   const getGrade = (score: number) => {
-    if (score >= 90) return { label: '우수', color: 'text-emerald-600', bgColor: 'bg-emerald-500', lightBg: 'bg-emerald-50' };
-    if (score >= 80) return { label: '양호', color: 'text-blue-600', bgColor: 'bg-blue-500', lightBg: 'bg-blue-50' };
-    if (score >= 70) return { label: '보통', color: 'text-amber-600', bgColor: 'bg-amber-500', lightBg: 'bg-amber-50' };
-    return { label: '개선 필요', color: 'text-rose-600', bgColor: 'bg-rose-500', lightBg: 'bg-rose-50' };
+    if (score >= 90) return { label: '우수', color: 'text-emerald-600', bgColor: 'bg-emerald-500', lightBg: 'bg-emerald-50', borderColor: 'hover:border-emerald-200' };
+    if (score >= 80) return { label: '양호', color: 'text-blue-600', bgColor: 'bg-blue-500', lightBg: 'bg-blue-50', borderColor: 'hover:border-blue-200' };
+    if (score >= 70) return { label: '보통', color: 'text-amber-600', bgColor: 'bg-amber-500', lightBg: 'bg-amber-50', borderColor: 'hover:border-amber-200' };
+    return { label: '개선 필요', color: 'text-rose-600', bgColor: 'bg-rose-500', lightBg: 'bg-rose-50', borderColor: 'hover:border-rose-200' };
   };
 
   const grade = getGrade(pronunciationScore);
