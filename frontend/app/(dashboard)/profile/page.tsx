@@ -17,7 +17,6 @@ import {
   ThemeIcon,
   TextInput,
   UnstyledButton,
-  Indicator,
 } from "@mantine/core";
 import {
   IconUser,
@@ -25,13 +24,22 @@ import {
   IconLogout,
   IconDeviceFloppy,
   IconCheck,
+  IconChartBar,
 } from "@tabler/icons-react";
 
 interface UserProfile {
   id: string;
   displayName: string;
-  currentLevelId: string;
-  targetLevelId: string;
+  currentLevel?: {
+    id: string;
+    levelCode: string;
+    levelName: string;
+  };
+  targetLevel?: {
+    id: string;
+    levelCode: string;
+    levelName: string;
+  };
 }
 
 interface Level {
@@ -47,6 +55,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [currentLevelId, setCurrentLevelId] = useState("");
   const [targetLevelId, setTargetLevelId] = useState("");
 
   useEffect(() => {
@@ -57,27 +66,23 @@ export default function ProfilePage() {
     try {
       setIsLoading(true);
 
-      const [profileRes] = await Promise.all([
+      const [profileRes, levelsRes] = await Promise.all([
         fetch("/api/profile"),
-        fetch("/api/mastery"),
+        fetch("/api/levels"),
       ]);
 
       if (profileRes.ok) {
         const data = await profileRes.json();
         setProfile(data.profile);
         setDisplayName(data.profile.displayName || "");
-        setTargetLevelId(data.profile.targetLevelId || "");
+        setCurrentLevelId(data.profile.currentLevel?.id || "");
+        setTargetLevelId(data.profile.targetLevel?.id || "");
       }
 
-      const mockLevels = [
-        { id: "1", levelCode: "IL", levelName: "Intermediate Low" },
-        { id: "2", levelCode: "IM1", levelName: "Intermediate Mid 1" },
-        { id: "3", levelCode: "IM2", levelName: "Intermediate Mid 2" },
-        { id: "4", levelCode: "IM3", levelName: "Intermediate Mid 3" },
-        { id: "5", levelCode: "IH", levelName: "Intermediate High" },
-        { id: "6", levelCode: "AL", levelName: "Advanced Low" },
-      ];
-      setLevels(mockLevels);
+      if (levelsRes.ok) {
+        const data = await levelsRes.json();
+        setLevels(data.levels);
+      }
     } catch (error) {
       console.error("프로필 로드 실패:", error);
     } finally {
@@ -95,6 +100,7 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           displayName,
+          currentLevelId,
           targetLevelId,
         }),
       });
@@ -162,12 +168,60 @@ export default function ProfilePage() {
         </Box>
       </Card>
 
+      {/* Current Level Card */}
+      <Card shadow="sm" radius="lg" padding={0} withBorder>
+        <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+          <Group gap="xs">
+            <IconChartBar size={20} />
+            <Title order={4} fw={700}>현재 레벨</Title>
+          </Group>
+          <Text size="sm" c="dimmed">현재 본인의 OPIc 실력 수준을 선택하세요. 맞춤형 학습 콘텐츠를 제공합니다.</Text>
+        </Box>
+        <Box p="xl">
+          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="md">
+            {levels.map((level) => {
+              const isSelected = currentLevelId === level.id;
+              return (
+                <UnstyledButton key={level.id} onClick={() => setCurrentLevelId(level.id)}>
+                  <Paper
+                    p="lg"
+                    radius="lg"
+                    withBorder
+                    style={{
+                      borderWidth: 2,
+                      borderColor: isSelected ? "var(--mantine-color-blue-6)" : "var(--mantine-color-gray-2)",
+                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : "white",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <Stack align="center" gap="xs">
+                      <Text fz={28} fw={900} c={isSelected ? "blue" : "dimmed"}>
+                        {level.levelCode}
+                      </Text>
+                      <Text size="xs" fw={600} c={isSelected ? "blue.7" : "dimmed"} tt="uppercase" ta="center">
+                        {level.levelName}
+                      </Text>
+                      {isSelected && (
+                        <ThemeIcon size="xs" radius="xl" color="blue">
+                          <IconCheck size={10} />
+                        </ThemeIcon>
+                      )}
+                    </Stack>
+                  </Paper>
+                </UnstyledButton>
+              );
+            })}
+          </SimpleGrid>
+        </Box>
+      </Card>
+
       {/* Target Level Card */}
       <Card shadow="sm" radius="lg" padding={0} withBorder>
         <Box p="lg" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
           <Group gap="xs">
             <IconTarget size={20} />
-            <Title order={4} fw={700}>학습 목표 설정</Title>
+            <Title order={4} fw={700}>목표 레벨</Title>
           </Group>
           <Text size="sm" c="dimmed">목표로 하는 OPIc 등급을 선택하세요. AI가 이에 맞춰 피드백을 조정합니다.</Text>
         </Box>
@@ -188,7 +242,6 @@ export default function ProfilePage() {
                       cursor: "pointer",
                       transition: "all 0.2s",
                     }}
-                    className="hover:border-violet-300"
                   >
                     <Stack align="center" gap="xs">
                       <Text fz={28} fw={900} c={isSelected ? "violet" : "dimmed"}>

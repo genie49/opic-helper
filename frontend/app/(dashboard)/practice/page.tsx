@@ -52,6 +52,11 @@ interface DashboardStats {
   avgScore: string;
 }
 
+interface UserLevel {
+  currentLevelCode: string;
+  targetLevelCode: string;
+}
+
 export default function PracticePage() {
   const [question, setQuestion] = useState<any>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
@@ -63,11 +68,28 @@ export default function PracticePage() {
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
+  const [userLevel, setUserLevel] = useState<UserLevel>({ currentLevelCode: "IM2", targetLevelCode: "IH" });
 
   useEffect(() => {
+    loadUserProfile();
     loadDashboardStats();
     loadQuestion();
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await fetch("/api/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUserLevel({
+          currentLevelCode: data.profile.currentLevel?.levelCode || "IM2",
+          targetLevelCode: data.profile.targetLevel?.levelCode || "IH",
+        });
+      }
+    } catch (error) {
+      console.error("프로필 로드 실패:", error);
+    }
+  };
 
   const loadDashboardStats = async () => {
     try {
@@ -129,8 +151,8 @@ export default function PracticePage() {
           question.id,
           question.questionText,
           result.text,
-          "IM2", // TODO: 사용자 현재 레벨 가져오기
-          "IH",  // TODO: 사용자 목표 레벨 가져오기
+          userLevel.currentLevelCode,
+          userLevel.targetLevelCode,
           {
             onProgress: (progress) => {
               setEvaluationProgress(progress);

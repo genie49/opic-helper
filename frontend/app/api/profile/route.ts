@@ -2,29 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { userProfiles, opicLevels } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { withAuth } from "@/lib/api-utils/auth";
 import { notFoundError, handleApiError, ApiError } from "@/lib/api-utils/error";
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {
+      const currentLevel = alias(opicLevels, "currentLevel");
+      const targetLevel = alias(opicLevels, "targetLevel");
+
       const profile = await db
         .select({
           id: userProfiles.id,
           userId: userProfiles.userId,
           currentLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
+            id: currentLevel.id,
+            levelCode: currentLevel.levelCode,
+            levelName: currentLevel.levelName,
+            minUtterance: currentLevel.minUtterance,
+            minWords: currentLevel.minWords,
           },
           targetLevel: {
-            id: opicLevels.id,
-            levelCode: opicLevels.levelCode,
-            levelName: opicLevels.levelName,
-            minUtterance: opicLevels.minUtterance,
-            minWords: opicLevels.minWords,
+            id: targetLevel.id,
+            levelCode: targetLevel.levelCode,
+            levelName: targetLevel.levelName,
+            minUtterance: targetLevel.minUtterance,
+            minWords: targetLevel.minWords,
           },
           displayName: userProfiles.displayName,
           createdAt: userProfiles.createdAt,
@@ -32,12 +36,12 @@ export async function GET(request: NextRequest) {
         })
         .from(userProfiles)
         .leftJoin(
-          opicLevels,
-          eq(userProfiles.currentLevelId, opicLevels.id)
+          currentLevel,
+          eq(userProfiles.currentLevelId, currentLevel.id)
         )
         .leftJoin(
-          opicLevels,
-          eq(userProfiles.targetLevelId, opicLevels.id)
+          targetLevel,
+          eq(userProfiles.targetLevelId, targetLevel.id)
         )
         .where(eq(userProfiles.userId, userId))
         .limit(1);
@@ -63,11 +67,14 @@ export async function PATCH(request: NextRequest) {
   return withAuth(request, async (userId) => {
     try {
       const body = await request.json();
-      const { targetLevelId, displayName } = body;
+      const { targetLevelId, currentLevelId, displayName } = body;
 
       const updates: Record<string, any> = {};
       if (targetLevelId !== undefined) {
         updates.targetLevelId = targetLevelId;
+      }
+      if (currentLevelId !== undefined) {
+        updates.currentLevelId = currentLevelId;
       }
       if (displayName !== undefined) {
         updates.displayName = displayName;

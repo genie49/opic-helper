@@ -79,6 +79,11 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
+interface UserLevel {
+  currentLevelCode: string;
+  targetLevelCode: string;
+}
+
 export default function RoleplayPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
@@ -98,6 +103,7 @@ export default function RoleplayPage() {
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
+  const [userLevel, setUserLevel] = useState<UserLevel>({ currentLevelCode: "IM2", targetLevelCode: "IH" });
 
   // AI 롤플레이 상태
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -106,8 +112,24 @@ export default function RoleplayPage() {
   const [streamingContent, setStreamingContent] = useState("");
 
   useEffect(() => {
+    loadUserProfile();
     loadQuestion();
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await fetch("/api/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUserLevel({
+          currentLevelCode: data.profile.currentLevel?.levelCode || "IM2",
+          targetLevelCode: data.profile.targetLevel?.levelCode || "IH",
+        });
+      }
+    } catch (error) {
+      console.error("프로필 로드 실패:", error);
+    }
+  };
 
   const loadQuestion = async () => {
     setIsLoadingQuestion(true);
@@ -364,8 +386,8 @@ export default function RoleplayPage() {
           question.id,
           question.questionText,
           allAnswers,
-          "IM2",
-          "IH",
+          userLevel.currentLevelCode,
+          userLevel.targetLevelCode,
           { onProgress: (progress) => setEvaluationProgress(progress) }
         );
       }
